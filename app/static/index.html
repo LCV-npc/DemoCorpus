@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Hệ thống thu thập và xây dựng kho ngữ liệu y tế tiếng Việt từ các tạp chí y khoa">
+    <title>Medical PDF Corpus Builder — Kho ngữ liệu y tế tiếng Việt</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <!-- ═══════════ Animated Background ═══════════ -->
+    <div class="bg-grid" aria-hidden="true"></div>
+    <div class="bg-glow bg-glow--1" aria-hidden="true"></div>
+    <div class="bg-glow bg-glow--2" aria-hidden="true"></div>
+
+    <!-- ═══════════ Navigation ═══════════ -->
+    <nav class="nav" id="main-nav">
+        <div class="nav__brand">
+            <span class="nav__icon">🏥</span>
+            <span class="nav__title">Medical Corpus Builder</span>
+        </div>
+        <div class="nav__links">
+            <a href="#scraper" class="nav__link">Thu thập</a>
+            <a href="#library" class="nav__link">Thư viện</a>
+            <a href="#stats" class="nav__link">Thống kê</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <!-- ═══════════ Hero Section ═══════════ -->
+        <section class="hero" id="hero">
+            <div class="hero__badge">
+                <span class="hero__badge-dot"></span>
+                Milestone 0 + 1
+            </div>
+            <h1 class="hero__title">
+                Xây dựng<br>
+                <span class="hero__gradient">Kho Ngữ Liệu Y Tế</span><br>
+                Tiếng Việt
+            </h1>
+            <p class="hero__subtitle">
+                Thu thập tự động PDF từ các tạp chí y khoa — hỗ trợ OJS và website bất kỳ.
+                <br>Phân tích, lọc trùng, trích xuất metadata thông minh.
+            </p>
+            <div class="hero__actions">
+                <a href="#scraper" class="btn btn--primary" id="hero-start-btn">
+                    <span class="btn__icon">🚀</span>
+                    Bắt đầu thu thập
+                </a>
+                <a href="#library" class="btn btn--secondary" id="hero-library-btn">
+                    <span class="btn__icon">📚</span>
+                    Xem thư viện
+                </a>
+            </div>
+            <div class="hero__stats" id="hero-stats">
+                <div class="hero__stat">
+                    <span class="hero__stat-value" id="stat-total-hero">0</span>
+                    <span class="hero__stat-label">PDF đã thu thập</span>
+                </div>
+                <div class="hero__stat">
+                    <span class="hero__stat-value" id="stat-scraped-hero">0</span>
+                    <span class="hero__stat-label">Từ web scraper</span>
+                </div>
+                <div class="hero__stat">
+                    <span class="hero__stat-value" id="stat-uploaded-hero">0</span>
+                    <span class="hero__stat-label">Upload thủ công</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════ Scraper Section ═══════════ -->
+        <section class="section" id="scraper">
+            <div class="section__header">
+                <h2 class="section__title">
+                    <span class="section__icon">🔍</span>
+                    Thu thập PDF
+                </h2>
+                <p class="section__desc">Dán URL tạp chí y khoa — hệ thống sẽ tự động tìm và tải tất cả PDF.</p>
+            </div>
+
+            <div class="scraper-grid">
+                <!-- Scraper Form -->
+                <div class="card card--glass" id="scraper-form-card">
+                    <div class="card__header">
+                        <h3 class="card__title">🌐 Web Scraper</h3>
+                        <div class="card__status" id="scraper-status-badge">
+                            <span class="status-dot status-dot--idle"></span>
+                            <span id="scraper-status-text">Sẵn sàng</span>
+                        </div>
+                    </div>
+                    <form id="scrape-form" class="scraper-form">
+                        <div class="form-group">
+                            <label class="form-label" for="scrape-url">URL tạp chí y khoa</label>
+                            <input
+                                type="url"
+                                id="scrape-url"
+                                class="form-input"
+                                placeholder="https://jmp.hmu.edu.vn/index.php/jmp"
+                                required
+                            >
+                            <span class="form-hint">Hỗ trợ: OJS, tạp chí có link PDF trực tiếp, website bất kỳ</span>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="max-depth">Độ sâu crawl</label>
+                                <input
+                                    type="number"
+                                    id="max-depth"
+                                    class="form-input"
+                                    value="2"
+                                    min="1"
+                                    max="5"
+                                >
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn--primary btn--full" id="btn-start-scrape">
+                                <span class="btn__icon">🚀</span>
+                                Bắt đầu quét
+                            </button>
+                            <button type="button" class="btn btn--danger btn--full" id="btn-stop-scrape" style="display:none">
+                                <span class="btn__icon">🛑</span>
+                                Dừng quét
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Upload -->
+                    <div class="upload-area" id="upload-area">
+                        <div class="upload-divider">
+                            <span>hoặc</span>
+                        </div>
+                        <div class="upload-zone" id="upload-zone">
+                            <input type="file" id="file-upload" accept=".pdf" hidden>
+                            <div class="upload-zone__content">
+                                <span class="upload-zone__icon">📄</span>
+                                <p class="upload-zone__text">Kéo thả file PDF hoặc <strong>click để chọn</strong></p>
+                                <p class="upload-zone__hint">Giới hạn: 50MB / file</p>
+                            </div>
+                        </div>
+                        <div class="upload-progress" id="upload-progress" style="display:none">
+                            <div class="upload-progress__bar">
+                                <div class="upload-progress__fill" id="upload-progress-fill"></div>
+                            </div>
+                            <span class="upload-progress__text" id="upload-progress-text">Đang upload...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Realtime Log Console -->
+                <div class="card card--glass card--log" id="log-card">
+                    <div class="card__header">
+                        <h3 class="card__title">📋 Console Log</h3>
+                        <button class="btn btn--ghost btn--sm" id="btn-clear-log" title="Xóa log">
+                            🗑️ Xóa
+                        </button>
+                    </div>
+                    <div class="log-console" id="log-console">
+                        <div class="log-entry log-entry--info">
+                            <span class="log-time">--:--:--</span>
+                            <span class="log-msg">Sẵn sàng. Nhập URL và nhấn "Bắt đầu quét" để thu thập PDF.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scraping Progress -->
+            <div class="progress-bar-container" id="scrape-progress-container" style="display:none">
+                <div class="progress-info">
+                    <span id="progress-label">Đang tải...</span>
+                    <span id="progress-count">0/0</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-bar__fill" id="scrape-progress-fill"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════ Stats Section ═══════════ -->
+        <section class="section" id="stats">
+            <div class="section__header">
+                <h2 class="section__title">
+                    <span class="section__icon">📊</span>
+                    Thống kê
+                </h2>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card stat-card--total" id="stat-card-total">
+                    <div class="stat-card__icon">📦</div>
+                    <div class="stat-card__value" id="stat-total">0</div>
+                    <div class="stat-card__label">Tổng PDF</div>
+                </div>
+                <div class="stat-card stat-card--downloaded" id="stat-card-downloaded">
+                    <div class="stat-card__icon">✅</div>
+                    <div class="stat-card__value" id="stat-downloaded">0</div>
+                    <div class="stat-card__label">Đã tải</div>
+                </div>
+                <div class="stat-card stat-card--duplicates" id="stat-card-duplicates">
+                    <div class="stat-card__icon">🔄</div>
+                    <div class="stat-card__value" id="stat-duplicates">0</div>
+                    <div class="stat-card__label">Trùng lặp</div>
+                </div>
+                <div class="stat-card stat-card--errors" id="stat-card-errors">
+                    <div class="stat-card__icon">⚠️</div>
+                    <div class="stat-card__value" id="stat-errors">0</div>
+                    <div class="stat-card__label">Lỗi</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════ PDF Library Section ═══════════ -->
+        <section class="section" id="library">
+            <div class="section__header">
+                <h2 class="section__title">
+                    <span class="section__icon">📚</span>
+                    Thư viện PDF
+                </h2>
+                <div class="section__actions">
+                    <div class="search-box" id="search-box">
+                        <span class="search-box__icon">🔍</span>
+                        <input
+                            type="search"
+                            class="search-box__input"
+                            id="search-input"
+                            placeholder="Tìm kiếm PDF..."
+                        >
+                    </div>
+                    <button class="btn btn--ghost" id="btn-refresh-library" title="Làm mới">
+                        🔄 Làm mới
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-container card card--glass" id="pdf-table-container">
+                <table class="data-table" id="pdf-table">
+                    <thead>
+                        <tr>
+                            <th class="data-table__th">#</th>
+                            <th class="data-table__th">Tên file</th>
+                            <th class="data-table__th">Nguồn</th>
+                            <th class="data-table__th">Kích thước</th>
+                            <th class="data-table__th">Thời gian</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pdf-table-body">
+                        <tr class="data-table__empty">
+                            <td colspan="5">
+                                <div class="empty-state">
+                                    <span class="empty-state__icon">📭</span>
+                                    <p class="empty-state__text">Chưa có PDF nào. Bắt đầu thu thập hoặc upload file.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Pagination -->
+                <div class="pagination" id="pagination">
+                    <button class="btn btn--ghost btn--sm" id="btn-prev-page" disabled>← Trước</button>
+                    <span class="pagination__info" id="pagination-info">Trang 1</span>
+                    <button class="btn btn--ghost btn--sm" id="btn-next-page" disabled>Tiếp →</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ═══════════ Footer ═══════════ -->
+    <footer class="footer">
+        <p>Medical PDF Corpus Builder v0.1.0 — Nghiên cứu khoa học 2024</p>
+    </footer>
+
+    <!-- ═══════════ Toast Container ═══════════ -->
+    <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
