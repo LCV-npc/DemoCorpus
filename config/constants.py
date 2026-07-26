@@ -40,7 +40,7 @@ CBS_THRESHOLD = 0.75              # Composite Badness Score threshold
 # Regex Patterns
 # ─────────────────────────────────────────────
 ABSTRACT_START_PATTERN = re.compile(
-    r"^\s*(abstract|tóm\s*tắt|tổng\s*quan)\s*[:\.\-]?\s*$",
+    r"^\s*(abstract|tóm\s*tắt|tổng\s*quan)\s*[:\.\-]?\s*",
     re.IGNORECASE | re.MULTILINE
 )
 
