@@ -4,12 +4,12 @@
 
 ## Tổng quan
 
-**Medical PDF Corpus Builder** là công cụ tự động thu thập bài báo y khoa dạng PDF từ các tạp chí khoa học trực tuyến. Hệ thống hỗ trợ:
+**Medical PDF Corpus Builder** là công cụ tự động thu thập và trích xuất thông tin bài báo y khoa dạng PDF. Hệ thống hỗ trợ:
 
-- 🌐 **Web Scraper** — Dán URL tạp chí → tự động tìm và tải tất cả PDF
-- 📤 **Upload thủ công** — Upload file PDF riêng lẻ
-- 🔍 **Pre-check** — Kiểm tra tính hợp lệ (magic bytes, file size, SHA-256 dedup)
-- 📊 **Dashboard** — Giao diện web theo dõi realtime
+- 🌐 **Web Scraper** — Tự động tìm và tải PDF từ tạp chí trực tuyến (OJS, Generic websites).
+- 🧠 **NLP Extraction Pipeline** — Tự động trích xuất thông tin (Tiêu đề, Tác giả) kết hợp Heuristics và mô hình học máy (PhoNER).
+- 📐 **Layout Analysis** — Phân tích không gian (Bounding Box, Text blocks) file PDF đa định dạng.
+- 🔍 **Validation & Quality Control** — Đánh giá độ tin cậy (Confidence Score), kiểm tra tính hợp lệ file (SHA-256).
 
 ## Cài đặt
 
@@ -52,9 +52,15 @@ pdf_collector/
 │   ├── models/
 │   │   ├── document.py       # TextBlock, Page, Document
 │   │   └── metadata.py       # ExtractedMetadata, FieldConfidence
+│   ├── text_extraction/      # Trích xuất text thô (PyMuPDF)
+│   ├── layout_analysis/      # Phân tích vùng không gian, block
+│   ├── title_detection/      # Heuristic scoring tìm tiêu đề
+│   ├── author_detection/     # NER (PhoNER) tìm tên tác giả
+│   ├── abstract_detection/   # Rule-based tìm phần tóm tắt
 │   └── pipeline/
-│       └── extractor_pipeline.py  # Pre-check logic
+│       └── extractor_pipeline.py  # Pipeline điều phối tổng
 ├── infrastructure/
+│   ├── nlp/                  # Loaders cho mô hình học máy (PhoNER)
 │   ├── storage/
 │   │   └── file_storage.py   # Lưu trữ file PDF
 │   ├── database/
@@ -105,16 +111,13 @@ python -m pytest tests/ -v
 
 - [x] **Milestone 0** — Foundation: project structure, domain models, config
 - [x] **Milestone 1** — PDF pre-check, file storage, SHA-256 hashing, web scraper
-- [ ] **Milestone 2** — Text extraction (PyMuPDF)
-- [ ] **Milestone 3** — Layout analysis
-- [ ] **Milestone 4** — Heuristic metadata extraction
-- [ ] **Milestone 5** — NER-based extraction
-- [ ] **Milestone 6** — Data cleaning & normalization
-- [ ] **Milestone 7** — Validation & scoring
-- [ ] **Milestone 8** — LLM enhancement
-- [ ] **Milestone 9** — MongoDB persistence
-- [ ] **Milestone 10** — Web application (full)
-
-## License
-
-Dự án nghiên cứu khoa học — Sử dụng nội bộ.
+- [x] **Milestone 2** — Text extraction (PyMuPDF)
+- [x] **Milestone 3** — Layout analysis
+- [x] **Milestone 4** — Heuristic metadata extraction (Title Detection)
+- [x] **Milestone 5** — NER-based extraction (Author Detection)
+- [ ] **Milestone 6** — Abstract Detection
+- [ ] **Milestone 7** — Data cleaning & normalization
+- [ ] **Milestone 8** — Validation & scoring
+- [ ] **Milestone 9** — LLM enhancement
+- [ ] **Milestone 10** — MongoDB persistence
+- [ ] **Milestone 11** — Web application (full)
