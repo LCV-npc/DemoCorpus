@@ -1,0 +1,446 @@
+"""
+core/author_detection/detector.py
+AuthorDetector — 3-tier pipeline phát hiện tác giả bài báo.
+
+Tier 1 (Heuristic): Dùng AUTHOR regions từ LayoutDocument → split & clean.
+Tier 2 (NER):       Fallback — dùng NER model trích xuất PERSON entities.
+Tier 3 (Pattern):   Last resort — tìm text giữa title và abstract/affiliation.
+
+Input:  LayoutDocument (M3) + TitleResult (M4).
+Output: AuthorResult.
+"""
+
+from __future__ import annotations
+
+import logging
+import re
+
+from core.layout_analysis.layout_model import (
+    LayoutDocument,
+    LayoutPage,
+    Region,
+    RegionType,
+)
+from core.text_extraction.models import BlockData
+from core.layout_analysis.heuristics import (
+    dominant_font_size,
+    is_bold as font_is_bold,
+    max_font_size_in_blocks,
+    contains_affiliation,
+)
+from core.title_detection.models import TitleResult
+from core.author_detection.models import AuthorInfo, AuthorResult
+from core.author_detection.cleaner import AuthorCleaner
+from core.author_detection.ner_engine import NEREngine, StubNEREngine
+
+logger = logging.getLogger(__name__)
+
+# Confidence ranges theo tier
+_CONF_TIER1_MIN = 0.75
+_CONF_TIER1_MAX = 0.95
+_CONF_TIER2_MIN = 0.65
+_CONF_TIER2_MAX = 0.90
+_CONF_TIER3_MIN = 0.35
+_CONF_TIER3_MAX = 0.70
+
+
+class AuthorDetector:
+    """
+    Phát hiện tác giả bài báo khoa học từ LayoutDocument + TitleResult.
+
+    Pipeline 3 tiers theo thứ tự ưu tiên:
+    1. Heuristic — AUTHOR zone blocks → split & clean
+    2. NER — NER model trích xuất PERSON entities (optional)
+    3. Pattern — blocks giữa title_y_end và abstract_y → split & clean
+
+    Sử dụng AuthorCleaner cho tất cả text cleaning.
+    """
+
+    def __init__(
+        self,
+        cleaner: AuthorCleaner | None = None,
+        ner_engine: NEREngine | None = None,
+    ):
+        """
+        Khởi tạo detector.
+
+        Args:
+            cleaner: AuthorCleaner instance. Nếu None, tạo mới.
+            ner_engine: NER engine (optional). Nếu None, dùng StubNEREngine.
+        """
+        self._cleaner = cleaner or AuthorCleaner()
+        self._ner = ner_engine or StubNEREngine()
+        logger.info("AuthorDetector initialized")
+
+    def detect(
+        self,
+        doc: LayoutDocument,
+        title_result: TitleResult | None = None,
+    ) -> AuthorResult:
+        """
+        Phát hiện tác giả từ LayoutDocument.
+
+        Thử tuần tự 3 tiers. Trả về kết quả đầu tiên non-empty.
+
+        Args:
+            doc: LayoutDocument từ Giai đoạn 3.
+            title_result: TitleResult từ Giai đoạn 4 (optional).
+
+        Returns:
+            AuthorResult với danh sách authors, confidence, strategy.
+        """
+        if not doc.pages:
+            logger.warning(f"Empty document: {doc.file_path}")
+            return AuthorResult(strategy="none")
+
+        first_page = doc.pages[0]
+
+        # Tier 1: Heuristic — AUTHOR zones
+        result = self._tier1_heuristic(first_page)
+        if result and result.authors:
+            logger.info(
+                f"Tier 1 (heuristic): {result.count} authors | "
+                f"{result.author_names[:3]}"
+            )
+            return result
+
+        # Tier 2: NER — PERSON entities
+        result = self._tier2_ner(first_page)
+        if result and result.authors:
+            logger.info(
+                f"Tier 2 (ner): {result.count} authors | "
+                f"{result.author_names[:3]}"
+            )
+            return result
+
+        # Tier 3: Pattern — gap between title and abstract
+        result = self._tier3_pattern(first_page, title_result)
+        if result and result.authors:
+            logger.info(
+                f"Tier 3 (pattern): {result.count} authors | "
+                f"{result.author_names[:3]}"
+            )
+            return result
+
+        logger.warning(f"No authors found: {doc.file_path}")
+        return AuthorResult(strategy="none")
+
+    # ── Tier 1: Heuristic ──
+
+    def _tier1_heuristic(self, page: LayoutPage) -> AuthorResult | None:
+        """
+        Trích xuất tác giả từ AUTHOR regions.
+
+        Lấy tất cả Region(type=AUTHOR) → gộp text → split & clean.
+
+        Args:
+            page: LayoutPage (trang 0).
+
+        Returns:
+            AuthorResult hoặc None nếu không có AUTHOR regions.
+        """
+        author_regions = page.get_regions(RegionType.AUTHOR)
+        if not author_regions:
+            logger.debug("Tier 1: No AUTHOR regions found")
+            return None
+
+        # Gộp text từ tất cả AUTHOR regions
+        raw_text = self._merge_region_texts(author_regions)
+
+        if not raw_text.strip():
+            return None
+
+        # Extract emails trước khi clean
+        emails = self._cleaner.extract_emails(raw_text)
+
+        # Split & clean
+        names = self._cleaner.split_and_clean(raw_text)
+
+        if not names:
+            logger.debug(f"Tier 1: No valid names after cleaning: {raw_text[:80]!r}")
+            return None
+
+        # Build AuthorInfo list
+        authors = self._build_author_infos(names, emails, page)
+
+        # Confidence based on region confidence + number of authors
+        region_conf = sum(r.confidence for r in author_regions) / len(author_regions)
+        confidence = self._map_confidence(
+            region_conf, _CONF_TIER1_MIN, _CONF_TIER1_MAX
+        )
+
+        return AuthorResult(
+            authors=authors,
+            confidence=confidence,
+            strategy="heuristic",
+            raw_text=raw_text,
+        )
+
+    # ── Tier 2: NER ──
+
+    def _tier2_ner(self, page: LayoutPage) -> AuthorResult | None:
+        """
+        Trích xuất tác giả bằng NER model.
+
+        Chạy NER trên text vùng top 40% trang → filter PERSON entities.
+
+        Args:
+            page: LayoutPage (trang 0).
+
+        Returns:
+            AuthorResult hoặc None nếu NER không tìm thấy gì.
+        """
+        # Lấy text từ top 40% trang (vùng có thể chứa author)
+        raw_text = self._get_top_region_text(page, fraction=0.40)
+
+        if not raw_text.strip():
+            return None
+
+        # Chạy NER
+        person_names = self._ner.extract_persons(raw_text)
+
+        if not person_names:
+            logger.debug("Tier 2: NER found no PERSON entities")
+            return None
+
+        # Clean mỗi tên
+        cleaned: list[str] = []
+        for name in person_names:
+            clean = self._cleaner.clean_name(name)
+            if clean:
+                cleaned.append(clean)
+
+        # Filter & dedup
+        names = self._cleaner.filter_names(cleaned)
+
+        if not names:
+            return None
+
+        # Extract emails
+        emails = self._cleaner.extract_emails(raw_text)
+
+        authors = self._build_author_infos(names, emails, page)
+
+        return AuthorResult(
+            authors=authors,
+            confidence=self._map_confidence(0.7, _CONF_TIER2_MIN, _CONF_TIER2_MAX),
+            strategy="ner",
+            raw_text=raw_text,
+        )
+
+    # ── Tier 3: Pattern ──
+
+    def _tier3_pattern(
+        self,
+        page: LayoutPage,
+        title_result: TitleResult | None,
+    ) -> AuthorResult | None:
+        """
+        Fallback: tìm text giữa title và abstract/affiliation.
+
+        Xác định vùng:
+        - Top boundary: title_y_end (bottom Y của title bbox)
+        - Bottom boundary: abstract_y hoặc affiliation_y (cái nào gần hơn)
+
+        Lấy blocks trong vùng đó → gộp text → split & clean.
+
+        Args:
+            page: LayoutPage (trang 0).
+            title_result: TitleResult từ M4.
+
+        Returns:
+            AuthorResult hoặc None.
+        """
+        # Xác định boundaries
+        title_y_end = self._get_title_y_end(page, title_result)
+        abstract_y = self._find_region_y(page, RegionType.ABSTRACT)
+        affiliation_y = self._find_region_y(page, RegionType.AFFILIATION)
+
+        if title_y_end is None:
+            logger.debug("Tier 3: Cannot determine title bottom boundary")
+            return None
+
+        # Bottom boundary = min(abstract_y, affiliation_y) hoặc 40% trang
+        bottom_y = page.height * 0.40
+        if abstract_y is not None:
+            bottom_y = min(bottom_y, abstract_y)
+        if affiliation_y is not None:
+            bottom_y = min(bottom_y, affiliation_y)
+
+        # Lấy blocks trong vùng
+        gap_blocks = self._get_gap_blocks(page, title_y_end, bottom_y)
+
+        if not gap_blocks:
+            logger.debug("Tier 3: No blocks in title-abstract gap")
+            return None
+
+        # Gộp text
+        raw_text = " ".join(b.text.strip() for b in gap_blocks if b.text.strip())
+
+        if not raw_text.strip():
+            return None
+
+        # Extract emails
+        emails = self._cleaner.extract_emails(raw_text)
+
+        # Split & clean
+        names = self._cleaner.split_and_clean(raw_text)
+
+        if not names:
+            logger.debug(f"Tier 3: No valid names in gap: {raw_text[:80]!r}")
+            return None
+
+        authors = self._build_author_infos(names, emails, page)
+
+        # Lower confidence for pattern-based
+        confidence = self._map_confidence(
+            0.5, _CONF_TIER3_MIN, _CONF_TIER3_MAX
+        )
+
+        return AuthorResult(
+            authors=authors,
+            confidence=confidence,
+            strategy="pattern",
+            raw_text=raw_text,
+        )
+
+    # ── Helper Methods ──
+
+    def _build_author_infos(
+        self,
+        names: list[str],
+        emails: list[str],
+        page: LayoutPage,
+    ) -> list[AuthorInfo]:
+        """
+        Xây dựng danh sách AuthorInfo từ names và emails.
+
+        Gắn email cho author theo thứ tự (nếu số email ≤ số author).
+        Tìm affiliation từ AFFILIATION regions.
+
+        Args:
+            names: Danh sách tên đã clean.
+            emails: Danh sách emails extracted.
+            page: LayoutPage để tìm affiliations.
+
+        Returns:
+            Danh sách AuthorInfo.
+        """
+        # Extract affiliation text (nếu có)
+        affiliation_text = self._get_affiliation_text(page)
+
+        authors: list[AuthorInfo] = []
+        for i, name in enumerate(names):
+            email = emails[i] if i < len(emails) else None
+            authors.append(AuthorInfo(
+                name=name,
+                affiliation=affiliation_text if affiliation_text else None,
+                email=email,
+            ))
+
+        return authors
+
+    @staticmethod
+    def _merge_region_texts(regions: list[Region]) -> str:
+        """Gộp text từ nhiều regions, join bằng space."""
+        parts: list[str] = []
+        for region in regions:
+            text = region.text.replace("\n", " ").strip()
+            if text:
+                parts.append(text)
+        return " ".join(parts)
+
+    @staticmethod
+    def _get_top_region_text(page: LayoutPage, fraction: float = 0.40) -> str:
+        """Lấy text từ top fraction của trang."""
+        threshold_y = page.height * fraction
+        texts: list[str] = []
+        for region in page.regions:
+            if region.bbox[1] < threshold_y:
+                text = region.text.replace("\n", " ").strip()
+                if text:
+                    texts.append(text)
+        return " ".join(texts)
+
+    @staticmethod
+    def _get_title_y_end(
+        page: LayoutPage,
+        title_result: TitleResult | None,
+    ) -> float | None:
+        """
+        Tìm bottom Y của title.
+
+        Ưu tiên TitleResult.bbox, fallback tới TITLE regions.
+        """
+        # Từ TitleResult (M4)
+        if title_result and title_result.title and len(title_result.bbox) >= 4:
+            return title_result.bbox[3]
+
+        # Fallback: TITLE regions
+        title_regions = page.get_regions(RegionType.TITLE)
+        if title_regions:
+            return max(r.bbox[3] for r in title_regions)
+
+        return None
+
+    @staticmethod
+    def _find_region_y(page: LayoutPage, region_type: RegionType) -> float | None:
+        """Tìm y0 của region đầu tiên thuộc type."""
+        regions = page.get_regions(region_type)
+        if regions:
+            return regions[0].bbox[1]
+        return None
+
+    @staticmethod
+    def _get_gap_blocks(
+        page: LayoutPage,
+        top_y: float,
+        bottom_y: float,
+    ) -> list[BlockData]:
+        """
+        Lấy blocks nằm giữa top_y và bottom_y.
+
+        Loại bỏ blocks chứa affiliation keywords.
+
+        Args:
+            page: LayoutPage.
+            top_y: Biên trên (exclusive).
+            bottom_y: Biên dưới (exclusive).
+
+        Returns:
+            Danh sách blocks đã sort theo y0.
+        """
+        blocks: list[BlockData] = []
+        for region in page.regions:
+            for block in region.blocks:
+                block_top = block.bbox[1]
+                block_bottom = block.bbox[3]
+                # Block phải nằm trong vùng gap
+                if block_top >= top_y and block_bottom <= bottom_y:
+                    # Bỏ qua blocks chứa affiliation keywords
+                    text = block.text.strip()
+                    if text and not contains_affiliation(text):
+                        blocks.append(block)
+
+        # Sort theo y0
+        blocks.sort(key=lambda b: b.bbox[1])
+        return blocks
+
+    @staticmethod
+    def _get_affiliation_text(page: LayoutPage) -> str | None:
+        """Lấy affiliation text từ AFFILIATION regions."""
+        aff_regions = page.get_regions(RegionType.AFFILIATION)
+        if not aff_regions:
+            return None
+        texts = []
+        for r in aff_regions:
+            text = r.text.replace("\n", " ").strip()
+            if text:
+                texts.append(text)
+        return "; ".join(texts) if texts else None
+
+    @staticmethod
+    def _map_confidence(score: float, conf_min: float, conf_max: float) -> float:
+        """Map score → confidence range [conf_min, conf_max]."""
+        ratio = min(max(score, 0.0), 1.0)
+        return conf_min + ratio * (conf_max - conf_min)
