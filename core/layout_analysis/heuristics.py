@@ -213,3 +213,140 @@ def max_font_size_in_blocks(blocks: list[BlockData]) -> float:
     if not blocks:
         return 0.0
     return max(dominant_font_size(b) for b in blocks)
+
+
+# ─────────────────────────────────────────────
+# Vietnamese Author Name Detection (Option C fix)
+# ─────────────────────────────────────────────
+
+# Common Vietnamese surnames (covers ~95% of Vietnamese names)
+_VN_SURNAMES = (
+    "Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Huỳnh", "Phan",
+    "Vũ", "Võ", "Đặng", "Bùi", "Đỗ", "Hồ", "Ngô", "Dương",
+    "Lý", "Đào", "Đinh", "Lương", "Trương", "Tô", "Mai",
+    "Chu", "Lưu", "Tạ", "Hà", "Tăng", "Quách", "Thái",
+    "Cao", "Lã", "Triệu", "Kiều",
+    # Romanized variants (no diacritics - for English papers by VN authors)
+    "Nguyen", "Tran", "Le", "Pham", "Hoang", "Huynh", "Phan",
+    "Vu", "Vo", "Dang", "Bui", "Do", "Ho", "Ngo", "Duong",
+    "Ly", "Dao", "Dinh", "Luong", "Truong", "To", "Mai",
+    "Chu", "Luu", "Ta", "Ha", "Tang", "Quach", "Thai",
+    "Cao", "La", "Trieu", "Kieu",
+)
+
+# Pattern: Vietnamese name with optional superscript number
+# "Nguyễn Văn An1" or "Nguyễn Văn An1,2" or "Nguyễn Văn An*"
+_VN_NAME_WITH_MARKER = re.compile(
+    r"[A-ZÀ-Ỹ][a-zà-ỹ]+(?:\s+[A-ZÀ-Ỹ][a-zà-ỹ]+)+\s*[\d\*,]*"
+)
+
+# Pattern for author line: comma-separated names with superscript numbers
+# "Nguyễn Văn An1, Trần Thị Bình2, Lê Hoàng Cường3"
+_AUTHOR_LINE_PATTERN = re.compile(
+    r"[A-ZÀ-Ỹ][a-zà-ỹ]+\s+(?:[A-ZÀ-Ỹ][a-zà-ỹ]+\s*)+[\d\*]*"
+    r"(?:\s*,\s*[A-ZÀ-Ỹ][a-zà-ỹ]+\s+(?:[A-ZÀ-Ỹ][a-zà-ỹ]+\s*)+[\d\*]*)+",
+)
+
+
+def looks_like_author_line(text: str) -> bool:
+    """
+    Kiểm tra text có giống dòng tên tác giả không.
+
+    Nhận diện pattern:
+    - Nhiều tên người phân cách bằng dấu phẩy
+    - Có thể kèm superscript numbers (1,2,3)
+    - Chứa Vietnamese surnames
+    - KHÔNG phải reference text, body text, hoặc abstract
+
+    Args:
+        text: Text cần kiểm tra.
+
+    Returns:
+        True nếu text giống dòng tên tác giả.
+    """
+    stripped = text.strip()
+    if not stripped:
+        return False
+
+    # Skip if too short or too long
+    # Author lines are typically 20-200 chars
+    if len(stripped) < 10 or len(stripped) > 200:
+        return False
+
+    # Skip if starts with common non-author patterns
+    lower = stripped.lower()
+    skip_starts = (
+        "doi:", "http", "www.", "email:", "e-mail:",
+        "abstract", "tóm tắt", "mục tiêu", "đặt vấn đề",
+        "keywords", "từ khóa", "tài liệu",
+        "bệnh viện", "trường đại học", "khoa ", "bộ môn",
+        "chịu trách nhiệm", "ngày nhận", "ngày chấp nhận",
+        "kết quả", "phương pháp", "kết luận", "đối tượng",
+        "background", "objective", "method", "result", "conclusion",
+        "introduction", "discussion",
+        "trên thế giới", "trong nghiên cứu",
+        "v.", "i.", "ii.", "iii.", "iv.",
+    )
+    for prefix in skip_starts:
+        if lower.startswith(prefix):
+            return False
+
+    # Skip if starts with digit+period (reference entry: "7. Khami MR...")
+    if re.match(r"^\d+[\.\)]\s", stripped):
+        return False
+
+    # Skip if contains year citation pattern "(2020)" or "(2024)"
+    if re.search(r"\(\d{4}\)", stripped):
+        return False
+
+    # Skip if contains sentence-like patterns (periods followed by space+lowercase)
+    # References and body text have sentences; author lines don't
+    if re.search(r"\.\s+[a-zà-ỹ]", stripped):
+        return False
+
+    # Skip if it contains too many digits (likely body text with stats)
+    digit_count = sum(1 for c in stripped if c.isdigit())
+    alpha_count = sum(1 for c in stripped if c.isalpha())
+    if alpha_count > 0 and digit_count / alpha_count > 0.25:
+        return False
+
+    # Skip if contains common body/reference markers
+    body_markers = (
+        "et al", "vol.", "pp.", "issn", "isbn", "j.", "rev.",
+        "journal", "study", "research", "analysis", "patient",
+        "bệnh nhân", "nghiên cứu", "phẫu thuật", "điều trị",
+        "phương pháp", "kỹ thuật", "tỷ lệ", "kết quả",
+    )
+    for marker in body_markers:
+        if marker in lower:
+            return False
+
+    # Check 1: Contains Vietnamese surnames
+    has_vn_surname = False
+    for surname in _VN_SURNAMES:
+        if surname in stripped:
+            has_vn_surname = True
+            break
+
+    if not has_vn_surname:
+        return False
+
+    # Check 2: Has comma-separated pattern (multiple names)
+    name_matches = _VN_NAME_WITH_MARKER.findall(stripped)
+
+    # Calculate what fraction of text is covered by name patterns
+    total_name_chars = sum(len(m) for m in name_matches)
+    text_ratio = total_name_chars / len(stripped) if stripped else 0
+
+    # Require names to cover at least 50% of the text
+    if len(name_matches) >= 2 and text_ratio >= 0.50:
+        return True
+
+    # Check 3: Single name with number suffix (may be part of multi-line author)
+    # Must cover most of the text
+    if len(name_matches) == 1 and text_ratio >= 0.60:
+        if any(c.isdigit() or c == '*' for c in stripped):
+            return True
+
+    return False
+

@@ -71,9 +71,10 @@ _MULTI_SPACE = re.compile(r"\s+")
 _AFFILIATION_KEYWORDS = [
     "university", "institute", "department", "faculty", "school",
     "college", "laboratory", "hospital", "research center", "centre",
-    "đại học", "viện", "khoa", "bộ môn", "trường", "bệnh viện",
+    "đại học", "học viện", "bộ môn", "bệnh viện",
     "trung tâm", "phòng thí nghiệm", "corresponding author",
     "email", "e-mail", "abstract", "keywords",
+    "khoa y", "chuyên khoa", "đa khoa", "trường cao đẳng", "trường đại học"
 ]
 
 

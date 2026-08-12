@@ -37,6 +37,21 @@ TITLE_ZONE_FRACTION = 0.35        # Top 35% → candidate for TITLE
 CBS_THRESHOLD = 0.75              # Composite Badness Score threshold
 
 # ─────────────────────────────────────────────
+# Abstract Detection Thresholds (Milestone 6)
+# ─────────────────────────────────────────────
+ABSTRACT_MIN_LENGTH = 50          # Minimum characters cho abstract hợp lệ
+ABSTRACT_MAX_LENGTH = 4000        # Maximum characters cho abstract
+NEWLINE_RATIO_THRESHOLD = 0.10    # newline_count / text_length → warning flag
+
+# ─────────────────────────────────────────────
+# Data Cleaning & Noise Detection Thresholds (Milestone 7)
+# ─────────────────────────────────────────────
+NOISE_NON_ALPHA_THRESHOLD = 0.50      # >50% non-alpha chars → noisy
+NOISE_WHITESPACE_THRESHOLD = 0.40     # >40% whitespace → noisy
+NOISE_DUPLICATE_LINE_THRESHOLD = 0.50 # >50% duplicate lines → noisy
+NOISE_SYMBOL_THRESHOLD = 0.15         # >15% suspicious symbols → noisy
+
+# ─────────────────────────────────────────────
 # Regex Patterns
 # ─────────────────────────────────────────────
 ABSTRACT_START_PATTERN = re.compile(
@@ -91,8 +106,9 @@ CHAR_SUBSTITUTION_MAP = {
 AFFILIATION_KEYWORDS = [
     "university", "institute", "department", "faculty", "school of",
     "college", "laboratory", "hospital", "research center",
-    "đại học", "viện", "khoa", "bộ môn", "trường", "bệnh viện",
+    "đại học", "học viện", "bệnh viện",
     "trung tâm nghiên cứu", "phòng thí nghiệm",
+    "khoa y", "chuyên khoa", "đa khoa", "trường cao đẳng", "trường đại học", "bộ môn"
 ]
 
 # ─────────────────────────────────────────────

@@ -115,8 +115,8 @@ python -m pytest tests/ -v
 - [x] **Milestone 3** — Layout analysis
 - [x] **Milestone 4** — Heuristic metadata extraction (Title Detection)
 - [x] **Milestone 5** — NER-based extraction (Author Detection)
-- [ ] **Milestone 6** — Abstract Detection
-- [ ] **Milestone 7** — Data cleaning & normalization
+- [x] **Milestone 6** — Abstract Detection
+- [x] **Milestone 7** — Data cleaning & normalization
 - [ ] **Milestone 8** — Validation & scoring
 - [ ] **Milestone 9** — LLM enhancement
 - [ ] **Milestone 10** — MongoDB persistence

@@ -122,6 +122,15 @@ class AuthorDetector:
             )
             return result
 
+        # Tier 3.5: VN Pattern Fallback — scan BODY/ABSTRACT regions
+        result = self._tier3_5_vn_pattern(first_page, title_result)
+        if result and result.authors:
+            logger.info(
+                f"Tier 3.5 (vn_pattern): {result.count} authors | "
+                f"{result.author_names[:3]}"
+            )
+            return result
+
         logger.warning(f"No authors found: {doc.file_path}")
         return AuthorResult(strategy="none")
 
@@ -144,9 +153,43 @@ class AuthorDetector:
             logger.debug("Tier 1: No AUTHOR regions found")
             return None
 
-        # Gộp text từ tất cả AUTHOR regions
-        raw_text = self._merge_region_texts(author_regions)
+        import re
+        from core.layout_analysis.heuristics import matches_abstract_start, contains_affiliation
 
+        # Extract text line-by-line and stop if we hit abstract keywords.
+        # Fixes case where PyMuPDF grouped author + abstract into one block
+        # and M3 classified the whole block as AUTHOR.
+        author_lines = []
+        found_abstract = False
+
+        # Sắp xếp các blocks trong các regions theo Y coordinate
+        all_blocks = []
+        for region in author_regions:
+            all_blocks.extend(region.blocks)
+        all_blocks.sort(key=lambda b: b.bbox[1])
+
+        for block in all_blocks:
+            for line in block.lines:
+                text = line.text.strip()
+                if not text:
+                    continue
+                if matches_abstract_start(text):
+                    found_abstract = True
+                    break
+                
+                # Stop if we hit a line that is clearly body text
+                # Authors are names, not sentences. If it's long and doesn't look like authors/affiliation, it's body text.
+                from core.layout_analysis.heuristics import looks_like_author_line
+                if len(text) > 40 and not looks_like_author_line(text):
+                    if not contains_affiliation(text):
+                        found_abstract = True
+                        break
+
+                author_lines.append(text)
+            if found_abstract:
+                break
+
+        raw_text = " ".join(author_lines)
         if not raw_text.strip():
             return None
 
@@ -301,6 +344,81 @@ class AuthorDetector:
             authors=authors,
             confidence=confidence,
             strategy="pattern",
+            raw_text=raw_text,
+        )
+
+    # ── Tier 3.5: VN Pattern Fallback ──
+
+    def _tier3_5_vn_pattern(
+        self,
+        page: LayoutPage,
+        title_result: TitleResult | None,
+    ) -> AuthorResult | None:
+        """
+        Fallback: Tìm tác giả trong BODY hoặc ABSTRACT region dựa vào VN name pattern.
+        Giải quyết lỗi M3 phân loại nhầm author line thành BODY hoặc ABSTRACT.
+        """
+        from core.layout_analysis.heuristics import looks_like_author_line, matches_abstract_start
+
+        title_y_end = self._get_title_y_end(page, title_result)
+        if title_y_end is None:
+            return None
+
+        author_lines = []
+        found_abstract = False
+        
+        # Chỉ quét trong các vùng khả nghi nằm dưới title
+        target_regions = (
+            page.get_regions(RegionType.ABSTRACT) + 
+            page.get_regions(RegionType.BODY) +
+            page.get_regions(RegionType.AFFILIATION)
+        )
+        
+        # Sort regions theo y
+        target_regions.sort(key=lambda r: r.bbox[1])
+
+        for region in target_regions:
+            for block in region.blocks:
+                # Bỏ qua block nằm trên title
+                if block.bbox[1] < title_y_end - 5.0:
+                    continue
+
+                for line in block.lines:
+                    text = line.text.strip()
+                    if not text:
+                        continue
+                        
+                    # Dừng nếu gặp keyword bắt đầu abstract thực sự
+                    if matches_abstract_start(text):
+                        found_abstract = True
+                        break
+                        
+                    # Check author line pattern
+                    if looks_like_author_line(text):
+                        author_lines.append(text)
+
+                if found_abstract:
+                    break
+            if found_abstract:
+                break
+                
+        if not author_lines:
+            return None
+            
+        raw_text = " ".join(author_lines)
+        emails = self._cleaner.extract_emails(raw_text)
+        names = self._cleaner.split_and_clean(raw_text)
+
+        if not names:
+            return None
+
+        authors = self._build_author_infos(names, emails, page)
+        confidence = self._map_confidence(0.4, _CONF_TIER3_MIN, _CONF_TIER3_MAX)
+
+        return AuthorResult(
+            authors=authors,
+            confidence=confidence,
+            strategy="vn_pattern",
             raw_text=raw_text,
         )
 
