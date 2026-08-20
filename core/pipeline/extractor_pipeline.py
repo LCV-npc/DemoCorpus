@@ -27,8 +27,8 @@ class ExtractorPipeline:
     """
     Pipeline xử lý PDF — trích xuất metadata từ file PDF.
 
-    Milestone 1: chỉ có _step_precheck.
-    Các bước khác sẽ thêm ở milestone sau.
+    Milestone 1: _step_precheck (file validation + SHA-256).
+    Milestones 2-9: delegated to FullPipeline (text extraction → LLM enhancement).
     """
 
     def __init__(self):
@@ -46,21 +46,44 @@ class ExtractorPipeline:
             ExtractedMetadata đã xử lý.
 
         Raises:
-            PipelineError: Nếu bất kỳ bước nào thất bại.
+            PipelineError: Nếu precheck thất bại.
         """
         metadata = ExtractedMetadata(source=source, file_path=file_path)
 
-        # Step 1: Pre-check
+        # Step 1: Pre-check (M1)
         self._step_precheck(file_path, metadata)
 
-        # Step 2-N: Sẽ thêm ở milestone sau
-        # self._step_extract_text(file_path, metadata)
-        # self._step_analyze_layout(metadata)
-        # self._step_detect_title(metadata)
-        # self._step_detect_authors(metadata)
-        # self._step_detect_abstract(metadata)
-        # self._step_clean_data(metadata)
-        # self._step_validate(metadata)
+        # Steps 2-9: Full NLP pipeline
+        try:
+            from core.pipeline.full_pipeline import FullPipeline
+            full = FullPipeline(enable_llm=True)
+            result = full.process(file_path)
+
+            if result.success:
+                metadata.title = result.title
+                metadata.authors = result.authors or []
+                metadata.abstract = result.abstract
+                metadata.steps_completed.extend(result.stages_completed)
+                logger.info(
+                    f"Full pipeline completed for {file_path}: "
+                    f"title={'✓' if result.title else '✗'}, "
+                    f"authors={len(result.authors)}, "
+                    f"abstract={'✓' if result.abstract else '✗'}"
+                )
+            else:
+                logger.warning(
+                    f"Full pipeline partial failure at {result.failed_stage}: "
+                    f"{result.error_message}"
+                )
+                # Still store whatever was extracted
+                metadata.title = result.title
+                metadata.authors = result.authors or []
+                metadata.abstract = result.abstract
+                metadata.steps_completed.extend(result.stages_completed)
+
+        except Exception as e:
+            logger.error(f"Full pipeline error: {e}")
+            # Pipeline continues — precheck passed, NLP failed
 
         return metadata
 

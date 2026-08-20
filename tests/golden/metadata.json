@@ -1,0 +1,52 @@
+[
+  {
+    "filename": "2024.naacl-long.461.pdf",
+    "path": "../../2024.naacl-long.461.pdf",
+    "language": "en",
+    "layout": "2-col",
+    "source": "ACL Anthology",
+    "expected_title": "CNER: Concept and Named Entity Recognition",
+    "expected_authors": [
+      "Giuliano Martinelli",
+      "Francesco Maria Molfese",
+      "Simone Tedeschi"
+    ],
+    "expected_abstract_starts_with": "Named entities",
+    "expected_abstract_min_length": 100,
+    "notes": "Clean 2-column ACL format. Title extraction should be exact."
+  },
+  {
+    "filename": "2304.14953v2.pdf",
+    "path": "../../2304.14953v2.pdf",
+    "language": "en",
+    "layout": "1-col",
+    "source": "arXiv",
+    "expected_title": "CCpdf: Building a High Quality Corpus for Visually Rich Documents from Web Crawl Data",
+    "expected_authors": [
+      "Michał Turski",
+      "Tomasz Stanisławek",
+      "Karol Kaczmarek",
+      "Paweł Dyda",
+      "Filip Graliński"
+    ],
+    "expected_abstract_starts_with": "In recent years",
+    "expected_abstract_min_length": 100,
+    "notes": "Authors have affiliation superscripts that may leak into names."
+  },
+  {
+    "filename": "00982c98_00982c98.pdf",
+    "path": "../data/scraped_pdfs/tapchiyhocvietnam.vn/00982c98_00982c98.pdf",
+    "language": "vi",
+    "layout": "2-col",
+    "source": "tapchiyhocvietnam.vn",
+    "expected_title": "ĐÁNH GIÁ KẾT QUẢ PHẪU THUẬT MẤT VỮNG C1-C2 DO CHẤN THƯƠNG TẠI BỆNH VIỆN CHỢ RẪY",
+    "expected_authors": [
+      "Huỳnh Tiền Đức",
+      "Phan Quang Sơn",
+      "Lê Minh Huân"
+    ],
+    "expected_abstract_starts_with": "Background",
+    "expected_abstract_min_length": 50,
+    "notes": "Vietnamese medical paper. Authors are subset-match (may have more)."
+  }
+]

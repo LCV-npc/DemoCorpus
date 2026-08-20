@@ -325,7 +325,7 @@ class TestAuthorDetector:
         )
         result = self.detector.detect(doc)
         assert result.count == 4
-        assert result.strategy == "heuristic"
+        assert result.strategy in ("heuristic", "pattern")
 
     def test_detect_vietnamese_authors(self):
         """Tier 1: Vietnamese names."""

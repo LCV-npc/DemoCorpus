@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Generator
 from urllib.parse import urljoin, urlparse, unquote
+from urllib.robotparser import RobotFileParser
 
 import requests
 from bs4 import BeautifulSoup
@@ -34,6 +35,9 @@ from config.constants import (
     DEFAULT_RATE_LIMIT_MIN,
     DEFAULT_RATE_LIMIT_MAX,
     MAX_PAGES_TO_CRAWL,
+    MAX_ARTICLES,
+    MAX_PDFS,
+    ROBOTS_TXT_ENABLED,
     REQUEST_TIMEOUT,
     USER_AGENT,
     MAX_FILE_SIZE_BYTES,
@@ -121,6 +125,7 @@ class PDFScraper:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self._session = self._create_session()
         self._downloaded_hashes: set[str] = set()
+        self._robots_cache: dict[str, RobotFileParser] = {}
 
     def _create_session(self) -> requests.Session:
         """Tạo requests session với retry và headers."""
@@ -188,6 +193,15 @@ class PDFScraper:
 
             # Deduplicate links
             pdf_links = list(dict.fromkeys(pdf_links))
+
+            # Enforce MAX_PDFS limit
+            if len(pdf_links) > MAX_PDFS:
+                scrape_status.log(
+                    f"⚠️ Tìm thấy {len(pdf_links)} PDF, giới hạn {MAX_PDFS}",
+                    "warning"
+                )
+                pdf_links = pdf_links[:MAX_PDFS]
+
             scrape_status.total_found = len(pdf_links)
             scrape_status.log(f"🔍 Tìm thấy {len(pdf_links)} link PDF")
 
@@ -200,6 +214,12 @@ class PDFScraper:
                 if scrape_status.should_stop:
                     scrape_status.log("🛑 Đã dừng theo yêu cầu.")
                     break
+
+                # Robots.txt check
+                if not self._check_robots_txt(pdf_url):
+                    scrape_status.skipped += 1
+                    scrape_status.log(f"🤖 Bỏ qua (robots.txt): {pdf_url[:80]}")
+                    continue
 
                 scrape_status.current_url = pdf_url
                 scrape_status.log(f"📥 [{i}/{len(pdf_links)}] Đang tải: {pdf_url[:100]}")
@@ -692,6 +712,43 @@ class PDFScraper:
             logger.debug(f"Could not extract meta from {target_url}: {e}")
 
         return title, authors, abstract
+
+    # ─────────────────────────────────────────────
+    # Robots.txt compliance
+    # ─────────────────────────────────────────────
+
+    def _check_robots_txt(self, url: str) -> bool:
+        """
+        Check if URL is allowed by robots.txt.
+        Caches parser per domain. Returns True if allowed or if check fails.
+        """
+        if not ROBOTS_TXT_ENABLED:
+            return True
+
+        try:
+            parsed = urlparse(url)
+            domain = f"{parsed.scheme}://{parsed.netloc}"
+
+            if domain not in self._robots_cache:
+                rp = RobotFileParser()
+                robots_url = f"{domain}/robots.txt"
+                rp.set_url(robots_url)
+                try:
+                    rp.read()
+                except Exception:
+                    # If robots.txt can't be fetched, allow by default
+                    logger.debug(f"Could not fetch robots.txt for {domain}")
+                    self._robots_cache[domain] = None
+                    return True
+                self._robots_cache[domain] = rp
+
+            rp = self._robots_cache[domain]
+            if rp is None:
+                return True
+
+            return rp.can_fetch(USER_AGENT, url)
+        except Exception:
+            return True  # Allow on error
 
     # ─────────────────────────────────────────────
     # Utility methods

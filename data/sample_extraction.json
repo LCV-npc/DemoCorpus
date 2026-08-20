@@ -2,8 +2,8 @@
   "file_path": "D:\\Nghiên cứu khoa học\\pdf_collector\\data\\scraped_pdfs\\tapchiyhocvietnam.vn\\00982c98_00982c98.pdf",
   "page_count": 5,
   "is_born_digital": true,
-  "extraction_time_seconds": 0.037,
-  "total_blocks": 103,
+  "extraction_time_seconds": 0.05,
+  "total_blocks": 116,
   "total_spans": 741,
   "pages": [
     {
@@ -114,8 +114,8 @@
           "bbox": [
             72.02,
             96.86,
-            293.39,
-            177.68
+            293.38,
+            147.71
           ],
           "lines": [
             {
@@ -425,7 +425,19 @@
                   ]
                 }
               ]
-            },
+            }
+          ]
+        },
+        {
+          "block_number": 3,
+          "block_type": 0,
+          "bbox": [
+            89.9,
+            146.78,
+            293.39,
+            177.68
+          ],
+          "lines": [
             {
               "bbox": [
                 89.9,
@@ -498,13 +510,13 @@
           ]
         },
         {
-          "block_number": 3,
+          "block_number": 4,
           "block_type": 0,
           "bbox": [
-            72.02,
+            304.87,
             96.86,
-            529.24,
-            211.24
+            526.12,
+            107.75
           ],
           "lines": [
             {
@@ -568,7 +580,19 @@
                   ]
                 }
               ]
-            },
+            }
+          ]
+        },
+        {
+          "block_number": 5,
+          "block_type": 0,
+          "bbox": [
+            304.87,
+            106.82,
+            526.24,
+            147.71
+          ],
+          "lines": [
             {
               "bbox": [
                 322.75,
@@ -906,7 +930,19 @@
                   ]
                 }
               ]
-            },
+            }
+          ]
+        },
+        {
+          "block_number": 6,
+          "block_type": 0,
+          "bbox": [
+            72.02,
+            146.78,
+            529.24,
+            211.24
+          ],
+          "lines": [
             {
               "bbox": [
                 322.75,
@@ -1048,7 +1084,7 @@
           ]
         },
         {
-          "block_number": 4,
+          "block_number": 7,
           "block_type": 0,
           "bbox": [
             131.9,
@@ -1083,7 +1119,7 @@
           ]
         },
         {
-          "block_number": 5,
+          "block_number": 8,
           "block_type": 0,
           "bbox": [
             154.94,
@@ -1118,7 +1154,7 @@
           ]
         },
         {
-          "block_number": 6,
+          "block_number": 9,
           "block_type": 0,
           "bbox": [
             105.38,
@@ -1280,7 +1316,7 @@
           ]
         },
         {
-          "block_number": 7,
+          "block_number": 10,
           "block_type": 0,
           "bbox": [
             222.05,
@@ -1380,7 +1416,7 @@
           ]
         },
         {
-          "block_number": 8,
+          "block_number": 11,
           "block_type": 0,
           "bbox": [
             72.02,
@@ -1464,7 +1500,7 @@
           ]
         },
         {
-          "block_number": 9,
+          "block_number": 12,
           "block_type": 0,
           "bbox": [
             71.4,
@@ -2263,7 +2299,7 @@
           ]
         },
         {
-          "block_number": 10,
+          "block_number": 13,
           "block_type": 0,
           "bbox": [
             74.66,
@@ -2298,7 +2334,7 @@
           ]
         },
         {
-          "block_number": 11,
+          "block_number": 14,
           "block_type": 0,
           "bbox": [
             99.14,
@@ -2333,7 +2369,7 @@
           ]
         },
         {
-          "block_number": 12,
+          "block_number": 15,
           "block_type": 0,
           "bbox": [
             71.61,
@@ -2676,7 +2712,7 @@
           ]
         },
         {
-          "block_number": 13,
+          "block_number": 16,
           "block_type": 0,
           "bbox": [
             304.25,
@@ -3968,7 +4004,7 @@
           ]
         },
         {
-          "block_number": 14,
+          "block_number": 17,
           "block_type": 0,
           "bbox": [
             304.87,
@@ -5561,7 +5597,7 @@
             72.02,
             655.9,
             293.69,
-            728.28
+            680.04
           ],
           "lines": [
             {
@@ -5635,7 +5671,19 @@
                   ]
                 }
               ]
-            },
+            }
+          ]
+        },
+        {
+          "block_number": 8,
+          "block_type": 0,
+          "bbox": [
+            72.02,
+            680.02,
+            293.42,
+            728.28
+          ],
+          "lines": [
             {
               "bbox": [
                 89.22,
@@ -5757,7 +5805,7 @@
           ]
         },
         {
-          "block_number": 8,
+          "block_number": 9,
           "block_type": 0,
           "bbox": [
             304.87,
@@ -5815,7 +5863,7 @@
           ]
         },
         {
-          "block_number": 9,
+          "block_number": 10,
           "block_type": 0,
           "bbox": [
             304.87,
@@ -5922,7 +5970,7 @@
           ]
         },
         {
-          "block_number": 10,
+          "block_number": 11,
           "block_type": 0,
           "bbox": [
             304.87,
@@ -6029,7 +6077,7 @@
           ]
         },
         {
-          "block_number": 11,
+          "block_number": 12,
           "block_type": 0,
           "bbox": [
             304.87,
@@ -6185,7 +6233,7 @@
           ]
         },
         {
-          "block_number": 12,
+          "block_number": 13,
           "block_type": 0,
           "bbox": [
             304.87,
@@ -6404,7 +6452,7 @@
           ]
         },
         {
-          "block_number": 13,
+          "block_number": 14,
           "block_type": 0,
           "bbox": [
             304.87,
@@ -6485,7 +6533,7 @@
           ]
         },
         {
-          "block_number": 14,
+          "block_number": 15,
           "block_type": 0,
           "bbox": [
             304.87,
@@ -6543,7 +6591,7 @@
           ]
         },
         {
-          "block_number": 15,
+          "block_number": 16,
           "block_type": 0,
           "bbox": [
             304.87,
@@ -6601,7 +6649,7 @@
           ]
         },
         {
-          "block_number": 16,
+          "block_number": 17,
           "block_type": 0,
           "bbox": [
             304.87,
@@ -6682,13 +6730,13 @@
           ]
         },
         {
-          "block_number": 17,
+          "block_number": 18,
           "block_type": 0,
           "bbox": [
             304.87,
             472.15,
             526.54,
-            592.77
+            496.17
           ],
           "lines": [
             {
@@ -6736,7 +6784,19 @@
                   ]
                 }
               ]
-            },
+            }
+          ]
+        },
+        {
+          "block_number": 19,
+          "block_type": 0,
+          "bbox": [
+            304.87,
+            496.27,
+            526.54,
+            592.77
+          ],
+          "lines": [
             {
               "bbox": [
                 322.75,
@@ -6924,7 +6984,7 @@
           ]
         },
         {
-          "block_number": 18,
+          "block_number": 20,
           "block_type": 0,
           "bbox": [
             304.87,
@@ -7074,7 +7134,7 @@
           ]
         },
         {
-          "block_number": 19,
+          "block_number": 21,
           "block_type": 0,
           "bbox": [
             304.87,
@@ -7132,7 +7192,7 @@
           ]
         },
         {
-          "block_number": 20,
+          "block_number": 22,
           "block_type": 0,
           "bbox": [
             304.87,
@@ -8707,7 +8767,7 @@
             304.87,
             97.1,
             526.53,
-            235.6
+            178.12
           ],
           "lines": [
             {
@@ -8870,7 +8930,19 @@
                   ]
                 }
               ]
-            },
+            }
+          ]
+        },
+        {
+          "block_number": 11,
+          "block_type": 0,
+          "bbox": [
+            304.87,
+            177.5,
+            526.47,
+            235.6
+          ],
+          "lines": [
             {
               "bbox": [
                 322.75,
@@ -8989,7 +9061,7 @@
           ]
         },
         {
-          "block_number": 11,
+          "block_number": 12,
           "block_type": 0,
           "bbox": [
             318.94,
@@ -9047,7 +9119,7 @@
           ]
         },
         {
-          "block_number": 12,
+          "block_number": 13,
           "block_type": 0,
           "bbox": [
             383.86,
@@ -9082,7 +9154,7 @@
           ]
         },
         {
-          "block_number": 13,
+          "block_number": 14,
           "block_type": 0,
           "bbox": [
             309.43,
@@ -9140,13 +9212,13 @@
           ]
         },
         {
-          "block_number": 14,
+          "block_number": 15,
           "block_type": 0,
           "bbox": [
-            373.27,
+            379.99,
             272.06,
-            514.22,
-            326.83
+            488.54,
+            296.11
           ],
           "lines": [
             {
@@ -9217,7 +9289,19 @@
                   ]
                 }
               ]
-            },
+            }
+          ]
+        },
+        {
+          "block_number": 16,
+          "block_type": 0,
+          "bbox": [
+            373.27,
+            296.45,
+            514.22,
+            326.83
+          ],
+          "lines": [
             {
               "bbox": [
                 505.06,
@@ -9290,7 +9374,7 @@
           ]
         },
         {
-          "block_number": 15,
+          "block_number": 17,
           "block_type": 0,
           "bbox": [
             408.91,
@@ -9348,7 +9432,7 @@
           ]
         },
         {
-          "block_number": 16,
+          "block_number": 18,
           "block_type": 0,
           "bbox": [
             440.86,
@@ -9383,7 +9467,7 @@
           ]
         },
         {
-          "block_number": 17,
+          "block_number": 19,
           "block_type": 0,
           "bbox": [
             442.3,
@@ -9441,7 +9525,7 @@
           ]
         },
         {
-          "block_number": 18,
+          "block_number": 20,
           "block_type": 0,
           "bbox": [
             468.34,
@@ -9499,7 +9583,7 @@
           ]
         },
         {
-          "block_number": 19,
+          "block_number": 21,
           "block_type": 0,
           "bbox": [
             323.11,
@@ -9603,7 +9687,7 @@
           ]
         },
         {
-          "block_number": 20,
+          "block_number": 22,
           "block_type": 0,
           "bbox": [
             311.11,
@@ -9776,7 +9860,7 @@
           ]
         },
         {
-          "block_number": 21,
+          "block_number": 23,
           "block_type": 0,
           "bbox": [
             327.43,
@@ -9880,7 +9964,7 @@
           ]
         },
         {
-          "block_number": 22,
+          "block_number": 24,
           "block_type": 0,
           "bbox": [
             326.62,
@@ -9915,7 +9999,7 @@
           ]
         },
         {
-          "block_number": 23,
+          "block_number": 25,
           "block_type": 0,
           "bbox": [
             383.86,
@@ -9950,7 +10034,7 @@
           ]
         },
         {
-          "block_number": 24,
+          "block_number": 26,
           "block_type": 0,
           "bbox": [
             318.43,
@@ -10008,7 +10092,7 @@
           ]
         },
         {
-          "block_number": 25,
+          "block_number": 27,
           "block_type": 0,
           "bbox": [
             394.51,
@@ -10043,7 +10127,7 @@
           ]
         },
         {
-          "block_number": 26,
+          "block_number": 28,
           "block_type": 0,
           "bbox": [
             378.31,
@@ -10147,7 +10231,7 @@
           ]
         },
         {
-          "block_number": 27,
+          "block_number": 29,
           "block_type": 0,
           "bbox": [
             415.87,
@@ -10218,7 +10302,7 @@
           ]
         },
         {
-          "block_number": 28,
+          "block_number": 30,
           "block_type": 0,
           "bbox": [
             305.83,
@@ -10276,7 +10360,7 @@
           ]
         },
         {
-          "block_number": 29,
+          "block_number": 31,
           "block_type": 0,
           "bbox": [
             313.39,
@@ -10587,7 +10671,7 @@
           ]
         },
         {
-          "block_number": 30,
+          "block_number": 32,
           "block_type": 0,
           "bbox": [
             366.79,
@@ -10714,7 +10798,7 @@
           ]
         },
         {
-          "block_number": 31,
+          "block_number": 33,
           "block_type": 0,
           "bbox": [
             364.75,
@@ -10818,7 +10902,7 @@
           ]
         },
         {
-          "block_number": 32,
+          "block_number": 34,
           "block_type": 0,
           "bbox": [
             321.79,
@@ -10876,7 +10960,7 @@
           ]
         },
         {
-          "block_number": 33,
+          "block_number": 35,
           "block_type": 0,
           "bbox": [
             331.06,
@@ -11118,7 +11202,7 @@
           ]
         },
         {
-          "block_number": 34,
+          "block_number": 36,
           "block_type": 0,
           "bbox": [
             383.86,
@@ -11153,7 +11237,7 @@
           ]
         },
         {
-          "block_number": 35,
+          "block_number": 37,
           "block_type": 0,
           "bbox": [
             305.59,
@@ -11211,7 +11295,7 @@
           ]
         },
         {
-          "block_number": 36,
+          "block_number": 38,
           "block_type": 0,
           "bbox": [
             394.39,
@@ -11246,7 +11330,7 @@
           ]
         },
         {
-          "block_number": 37,
+          "block_number": 39,
           "block_type": 0,
           "bbox": [
             380.35,
@@ -11373,7 +11457,7 @@
           ]
         },
         {
-          "block_number": 38,
+          "block_number": 40,
           "block_type": 0,
           "bbox": [
             315.67,
@@ -11500,7 +11584,7 @@
           ]
         },
         {
-          "block_number": 39,
+          "block_number": 41,
           "block_type": 0,
           "bbox": [
             495.34,
@@ -11535,7 +11619,7 @@
           ]
         },
         {
-          "block_number": 40,
+          "block_number": 42,
           "block_type": 0,
           "bbox": [
             360.67,
@@ -11639,7 +11723,7 @@
           ]
         },
         {
-          "block_number": 41,
+          "block_number": 43,
           "block_type": 0,
           "bbox": [
             323.95,
@@ -11858,7 +11942,7 @@
           ]
         },
         {
-          "block_number": 42,
+          "block_number": 44,
           "block_type": 0,
           "bbox": [
             304.87,
@@ -16051,10 +16135,10 @@
           "block_number": 6,
           "block_type": 0,
           "bbox": [
-            72.02,
+            304.87,
             303.05,
-            529.21,
-            696.48
+            526.53,
+            462.5
           ],
           "lines": [
             {
@@ -16417,7 +16501,19 @@
                   ]
                 }
               ]
-            },
+            }
+          ]
+        },
+        {
+          "block_number": 7,
+          "block_type": 0,
+          "bbox": [
+            304.87,
+            462.17,
+            529.21,
+            504.52
+          ],
+          "lines": [
             {
               "bbox": [
                 322.75,
@@ -16548,7 +16644,19 @@
                   ]
                 }
               ]
-            },
+            }
+          ]
+        },
+        {
+          "block_number": 8,
+          "block_type": 0,
+          "bbox": [
+            304.87,
+            504.19,
+            526.14,
+            536.08
+          ],
+          "lines": [
             {
               "bbox": [
                 322.75,
@@ -16656,7 +16764,19 @@
                   ]
                 }
               ]
-            },
+            }
+          ]
+        },
+        {
+          "block_number": 9,
+          "block_type": 0,
+          "bbox": [
+            304.87,
+            535.63,
+            523.45,
+            557.08
+          ],
+          "lines": [
             {
               "bbox": [
                 322.75,
@@ -16741,7 +16861,19 @@
                   ]
                 }
               ]
-            },
+            }
+          ]
+        },
+        {
+          "block_number": 10,
+          "block_type": 0,
+          "bbox": [
+            304.87,
+            556.63,
+            529.19,
+            588.52
+          ],
+          "lines": [
             {
               "bbox": [
                 322.75,
@@ -16849,7 +16981,19 @@
                   ]
                 }
               ]
-            },
+            }
+          ]
+        },
+        {
+          "block_number": 11,
+          "block_type": 0,
+          "bbox": [
+            304.87,
+            588.19,
+            529.04,
+            620.08
+          ],
+          "lines": [
             {
               "bbox": [
                 322.13,
@@ -16944,7 +17088,19 @@
                   ]
                 }
               ]
-            },
+            }
+          ]
+        },
+        {
+          "block_number": 12,
+          "block_type": 0,
+          "bbox": [
+            72.02,
+            619.63,
+            526.23,
+            696.48
+          ],
+          "lines": [
             {
               "bbox": [
                 322.75,

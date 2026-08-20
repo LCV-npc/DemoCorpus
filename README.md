@@ -117,7 +117,28 @@ python -m pytest tests/ -v
 - [x] **Milestone 5** — NER-based extraction (Author Detection)
 - [x] **Milestone 6** — Abstract Detection
 - [x] **Milestone 7** — Data cleaning & normalization
-- [ ] **Milestone 8** — Validation & scoring
-- [ ] **Milestone 9** — LLM enhancement
+- [x] **Milestone 8** — Validation & scoring
+- [x] **Milestone 9** — LLM enhancement
 - [ ] **Milestone 10** — MongoDB persistence
 - [ ] **Milestone 11** — Web application (full)
+
+## Architecture
+
+```
+PDF File → ExtractorPipeline
+├── M1: Pre-check (magic bytes, size, SHA-256)
+└── FullPipeline (M2→M9)
+    ├── M2: Text Extraction (PyMuPDF)
+    ├── M3: Layout Analysis (columns, zones)
+    ├── M4: Title Detection (heuristic scoring)
+    ├── M5: Author Detection (NER + patterns)
+    ├── M6: Abstract Detection (rules)
+    ├── M7: Data Cleaning (noise removal, normalization)
+    ├── M8: Validation & Scoring (rule-based)
+    └── M9: LLM Enhancement (optional, cost-controlled)
+
+Web Scraper → SiteDetector → Adapter
+├── OJSSiteAdapter (tapchiyhocvietnam.vn, etc.)
+└── GenericSiteAdapter (fallback BFS)
+```
+

@@ -41,7 +41,7 @@ class Settings:
         # NER Model (Milestone 5+)
         self.NER_MODEL_PATH: str = os.getenv("NER_MODEL_PATH", "")
 
-        # LLM (Milestone 8+)
+        # LLM (Milestone 9)
         self.LLM_MODEL_PATH: str = os.getenv("LLM_MODEL_PATH", "")
         self.OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
         self.OPENAI_API_URL: str = os.getenv("OPENAI_API_URL", "")
