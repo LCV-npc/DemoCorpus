@@ -26,3 +26,18 @@ out.txt
 .env
 .env.*
 !.env.example
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Runtime PDF corpus (large, generated, and may contain sensitive source files)
+backend/data/uploads/
+backend/data/scraped_pdfs/
+
+# Downloaded research papers
+*.pdf
+
+# Local experimental/demo scripts
+demo_m*.py
+backend/demo_m*.py
