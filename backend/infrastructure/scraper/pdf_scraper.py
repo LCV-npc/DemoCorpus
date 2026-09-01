@@ -44,6 +44,7 @@ from config.constants import (
 )
 from config.settings import settings
 from core.abstract_detection.language import select_preferred_abstract
+from core.data_cleaning.text_cleaner import TextCleaner
 from infrastructure.scraper.url_safety import validate_public_http_url
 from infrastructure.scraper.site_detector import SiteDetector
 from infrastructure.scraper.publication_date import PublicationDate, PublicationDateExtractor
@@ -1225,7 +1226,9 @@ class PDFScraper:
             values: list[str] = []
             for tag in soup.find_all("meta"):
                 key = str(tag.get("name") or tag.get("property") or "").casefold()
-                value = str(tag.get("content") or "").strip()
+                value = TextCleaner.decode_html_entities(
+                    str(tag.get("content") or "").strip()
+                )
                 if key in expected and value and value not in values:
                     values.append(value)
             return values
@@ -1249,7 +1252,8 @@ class PDFScraper:
         abstract = select_preferred_abstract(abstract_values)
 
         def _normalize(value: str) -> str:
-            return re.sub(r"\s+", " ", value).strip()
+            cleaned, _ = TextCleaner.full_clean(value, preserve_paragraphs=False)
+            return cleaned
 
         metadata = {
             "title": _normalize(title),

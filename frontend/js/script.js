@@ -37,7 +37,20 @@
 
     const icon = (name) => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
     const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' }[char]));
-    const formatProse = (value) => typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
+    const entityDecoder = document.createElement('textarea');
+    const decodeHtmlEntities = (value) => {
+        if (typeof value !== 'string') return '';
+        let result = value;
+        for (let pass = 0; pass < 3 && /&(?:#\d+|#x[\da-f]+|[a-z][\da-z]+);/i.test(result); pass += 1) {
+            entityDecoder.innerHTML = result;
+            const decoded = entityDecoder.value;
+            if (decoded === result) break;
+            result = decoded;
+        }
+        return result;
+    };
+    const formatProse = (value) => decodeHtmlEntities(value).replace(/\s+/g, ' ').trim();
+    const formatAuthors = (authors) => Array.isArray(authors) ? authors.map(formatProse).filter(Boolean).join(', ') : '';
     const truncate = (value, length = 80) => { const text = formatProse(value); return text.length > length ? `${text.slice(0, length - 1)}…` : text; };
     const formatPercent = (value) => `${Math.round((Number(value) || 0) * 100)}%`;
     const formatFileSize = (bytes) => {
@@ -291,7 +304,7 @@
         dom.uploadResultStatus.className = `status-badge ${data.status === 'completed' ? 'status-badge--success' : 'status-badge--pending'}`;
         dom.uploadResultPaperId.textContent = `ID: ${data.paper_id || '—'}`;
         dom.uploadResultTitle.textContent = formatProse(data.title) || 'Không trích xuất được';
-        dom.uploadResultAuthors.textContent = data.authors?.length ? data.authors.join(', ') : 'Không trích xuất được';
+        dom.uploadResultAuthors.textContent = formatAuthors(data.authors) || 'Không trích xuất được';
         dom.uploadResultAbstract.textContent = formatProse(data.abstract) || 'Không trích xuất được';
         dom.uploadResultConfidence.textContent = formatPercent(confidence.overall);
         dom.uploadResultTitleScore.textContent = formatPercent(confidence.title?.score ?? confidence.title);
@@ -338,7 +351,7 @@
             dom.pdfTableBody.innerHTML = items.map((item) => {
                 const extracted = item.extracted || {};
                 const title = formatProse(extracted.title);
-                const authors = Array.isArray(extracted.authors) ? extracted.authors.join(', ') : '';
+                const authors = formatAuthors(extracted.authors);
                 const ready = Boolean(item.extracted_ready);
                 const paperId = item.paper_id || '';
                 const canView = ready && paperId;
@@ -368,7 +381,7 @@
             dom.resultsTableBody.innerHTML = items.map((item) => {
                 const extracted = item.extracted || {};
                 const title = formatProse(extracted.title);
-                const authors = Array.isArray(extracted.authors) ? extracted.authors.join(', ') : '';
+                const authors = formatAuthors(extracted.authors);
                 return `<tr><td data-label="Tài liệu"><strong class="doc-title" title="${escapeHtml(item.filename)}">${escapeHtml(item.filename || 'Không rõ tên tệp')}</strong><span class="doc-subtitle">${formatFileSize(item.file_size_bytes)}</span></td><td data-label="Metadata"><div class="metadata-preview"><strong title="${escapeHtml(title)}">${escapeHtml(title || 'Chưa trích xuất metadata')}</strong><span title="${escapeHtml(authors)}">${escapeHtml(authors || 'Chưa có tác giả')}</span></div></td><td data-label="Trạng thái"><span class="status-badge status-badge--pending">Đã tải · chờ trích xuất</span></td><td data-label="Thời điểm"><span class="cell-time">${formatTime(item.scraped_at || item.processing?.created_at)}</span></td><td class="table-action"><button class="btn btn--secondary btn--sm" type="button" data-paper-id="${escapeHtml(item.paper_id || '')}" disabled title="Hãy trích xuất metadata trước khi xem chi tiết">${icon('eye')}Xem</button></td></tr>`;
             }).join('');
         }
@@ -380,11 +393,14 @@
     async function openPaperDetail(paperId) {
         if (!paperId) return;
         try {
-            let paper; let transient = false;
-            try { paper = await apiGet(`/scrape/results/${encodeURIComponent(paperId)}`); transient = true; }
-            catch { paper = await apiGet(`/results/${encodeURIComponent(paperId)}`); }
-            currentModalPaperId = paperId; currentModalIsTransient = transient; lastFocusedElement = document.activeElement;
-            populateModal(paper, transient); dom.modalOverlay.hidden = false; document.body.style.overflow = 'hidden'; dom.modal.focus();
+            // Rows in the PDF library are backed by MongoDB. A paper may also
+            // still exist in the current crawl session as a lightweight,
+            // pre-extraction record with the same paper_id. Reading that
+            // transient record first made the modal hide metadata that had
+            // already been extracted and persisted successfully.
+            const paper = await apiGet(`/results/${encodeURIComponent(paperId)}`);
+            currentModalPaperId = paperId; currentModalIsTransient = false; lastFocusedElement = document.activeElement;
+            populateModal(paper, false); dom.modalOverlay.hidden = false; document.body.style.overflow = 'hidden'; dom.modal.focus();
         } catch (error) { showToast(`Không thể mở chi tiết: ${error.message}`, 'error'); }
     }
 
@@ -392,7 +408,7 @@
         const extracted = paper.extracted || {}; const confidence = paper.confidence || {}; const processing = paper.processing || {}; const review = paper.review || {}; const validation = paper.validation || {};
         dom.modalPaperId.textContent = paper.paper_id || '—';
         dom.modalTitle.textContent = formatProse(extracted.title) || 'Chưa có';
-        dom.modalAuthors.textContent = extracted.authors?.length ? extracted.authors.join(', ') : 'Chưa có';
+        dom.modalAuthors.textContent = formatAuthors(extracted.authors) || 'Chưa có';
         dom.modalAbstract.textContent = formatProse(extracted.abstract) || 'Chưa có';
         dom.modalSource.textContent = paper.source_journal_domain || paper.source || '—';
         dom.modalCreated.textContent = formatTime(processing.created_at || paper.scraped_at);

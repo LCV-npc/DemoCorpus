@@ -134,6 +134,17 @@ class TestVietnamesePreservation:
         assert "ự" in result
         assert len(result) == len(chars)
 
+    def test_repeated_html_entities_are_decoded_without_changing_ampersands(self):
+        encoded = (
+            "Nghi&amp;ecirc;n cứu điều trị d&amp;agrave;y "
+            "&amp;ldquo;Dạ dày HĐ&amp;rdquo; và AT&T"
+        )
+
+        cleaned, changes = TextCleaner.full_clean(encoded)
+
+        assert cleaned == 'Nghiên cứu điều trị dày "Dạ dày HĐ" và AT&T'
+        assert "html_entities_decoded" in changes
+
 
 # ═══════════════════════════════════════════════
 # 3. WHITESPACE NORMALIZATION

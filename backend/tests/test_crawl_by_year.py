@@ -303,6 +303,49 @@ def test_source_metadata_prefers_vietnamese_abstract_when_both_exist(monkeypatch
     assert metadata["abstract"] == vietnamese
 
 
+def test_source_metadata_decodes_double_encoded_html_entities(monkeypatch):
+    scraper = PDFScraper()
+    html = """
+        <meta name="citation_title" content="Điều trị bệnh dạ dày">
+        <meta name="citation_abstract" content="Nghi&amp;ecirc;n cứu điều trị d&amp;agrave;y &amp;ldquo;Dạ dày HĐ&amp;rdquo;.">
+    """
+    monkeypatch.setattr(
+        scraper,
+        "_fetch_page",
+        lambda _url: (html, "https://journal.example/article/entities"),
+    )
+
+    metadata = scraper.extract_source_metadata(
+        "https://journal.example/article/entities"
+    )
+
+    assert metadata["abstract"] == 'Nghiên cứu điều trị dày "Dạ dày HĐ".'
+
+
+def test_persistence_normalizes_entities_from_source_metadata():
+    result = PipelineResult(
+        title="PDF title",
+        authors=["PDF Author"],
+        abstract="A short PDF abstract.",
+    )
+    source = {
+        "title": "Nghi&amp;ecirc;n cứu bệnh dạ dày",
+        "authors": ["Nguy&amp;ecirc;n Văn A"],
+        "abstract": "Nghi&amp;ecirc;n cứu điều trị d&amp;agrave;y.",
+    }
+
+    normalized_source, _ = PersistenceService._apply_source_metadata(result, source)
+
+    assert result.title == "Nghiên cứu bệnh dạ dày"
+    assert result.authors == ["Nguyên Văn A"]
+    assert result.abstract == "Nghiên cứu điều trị dày."
+    assert normalized_source == {
+        "title": result.title,
+        "authors": result.authors,
+        "abstract": result.abstract,
+    }
+
+
 def test_source_metadata_wins_over_a_low_quality_pdf_candidate():
     result = PipelineResult(
         title="TẠP CHÍ Y HỌC VIỆT NAM TẬP 554 - THÁNG 9 - SỐ 1 - 2025",

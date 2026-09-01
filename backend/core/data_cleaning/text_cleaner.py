@@ -15,6 +15,7 @@ KHONG paraphrase, dich, hoac thay doi noi dung.
 
 from __future__ import annotations
 
+import html
 import re
 import unicodedata
 
@@ -45,6 +46,12 @@ _MULTI_SPACE = re.compile(r"[ \t]+")
 # Excessive blank lines (3+ newlines -> 2)
 _EXCESSIVE_NEWLINES = re.compile(r"\n{3,}")
 
+# Decode only complete HTML entities. The explicit guard avoids changing
+# ordinary medical text containing a literal ampersand, such as "AT&T".
+_HTML_ENTITY_PATTERN = re.compile(
+    r"&(?:#[0-9]{1,7}|#[xX][0-9A-Fa-f]{1,6}|[A-Za-z][A-Za-z0-9]{1,31});"
+)
+
 # Common compound word prefixes/suffixes that should NOT be dehyphenated
 _COMPOUND_PREFIXES = frozenset({
     "self", "non", "pre", "post", "anti", "co", "re", "sub",
@@ -68,6 +75,25 @@ class TextCleaner:
     Stateless -- tat ca methods la static hoac stateless.
     An toan cho Vietnamese text (preserve diacritics).
     """
+
+    @staticmethod
+    def decode_html_entities(text: str) -> str:
+        """Decode single or repeatedly encoded HTML entities safely."""
+        if not text:
+            return ""
+
+        result = text
+        # OJS metadata may contain ``&amp;ecirc;``. BeautifulSoup decodes
+        # the outer ``&amp;`` and leaves ``&ecirc;``, so allow a small,
+        # bounded number of passes until the value stabilizes.
+        for _ in range(3):
+            if not _HTML_ENTITY_PATTERN.search(result):
+                break
+            decoded = html.unescape(result)
+            if decoded == result:
+                break
+            result = decoded
+        return result
 
     @staticmethod
     def remove_control_chars(text: str) -> str:
@@ -226,8 +252,8 @@ class TextCleaner:
         preserve_paragraphs: bool = False,
     ) -> tuple[str, list[str]]:
         """
-        Full cleaning pipeline: control chars -> substitution ->
-        unicode -> hyphenation -> whitespace.
+        Full cleaning pipeline: HTML entities -> control chars -> substitution
+        -> unicode -> hyphenation -> whitespace.
 
         Args:
             text: Raw text.
@@ -243,31 +269,37 @@ class TextCleaner:
         changes: list[str] = []
         result = text
 
-        # Step 1: Control chars
+        # Step 1: HTML entities from web/citation metadata
+        cleaned = cls.decode_html_entities(result)
+        if cleaned != result:
+            changes.append("html_entities_decoded")
+        result = cleaned
+
+        # Step 2: Control chars
         cleaned = cls.remove_control_chars(result)
         if cleaned != result:
             changes.append("control_chars_removed")
         result = cleaned
 
-        # Step 2: Character substitution
+        # Step 3: Character substitution
         cleaned = cls.apply_char_substitution(result)
         if cleaned != result:
             changes.append("chars_substituted")
         result = cleaned
 
-        # Step 3: Unicode normalization
+        # Step 4: Unicode normalization
         cleaned = cls.normalize_unicode(result)
         if cleaned != result:
             changes.append("unicode_normalized")
         result = cleaned
 
-        # Step 4: Hyphenation repair
+        # Step 5: Hyphenation repair
         cleaned = cls.repair_hyphenation(result)
         if cleaned != result:
             changes.append("hyphenation_repaired")
         result = cleaned
 
-        # Step 5: Whitespace normalization
+        # Step 6: Whitespace normalization
         cleaned = cls.normalize_whitespace(result, preserve_paragraphs=preserve_paragraphs)
         if cleaned != result:
             changes.append("whitespace_normalized")

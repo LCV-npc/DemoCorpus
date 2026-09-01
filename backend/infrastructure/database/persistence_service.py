@@ -22,6 +22,7 @@ from pymongo.errors import DuplicateKeyError
 
 from core.models.metadata import ExtractedMetadata
 from core.abstract_detection.language import looks_vietnamese
+from core.data_cleaning.text_cleaner import TextCleaner
 from core.pipeline.full_pipeline import PipelineResult
 from core.validators.validation_engine import ValidationEngine
 from config.constants import OVERALL_FIELD_WEIGHTS
@@ -32,7 +33,7 @@ logger = logging.getLogger(__name__)
 # Bump this when an extraction rule changes so stored papers can be upgraded.
 # Bump when deterministic extraction/normalization logic changes so existing
 # PDFs can be extracted again from the Library without re-crawling.
-METADATA_EXTRACTION_VERSION = 7
+METADATA_EXTRACTION_VERSION = 8
 
 
 class PersistenceError(Exception):
@@ -100,7 +101,21 @@ class PersistenceService:
         and provides diagnostics.  Re-validating the resolved values prevents
         the old PDF-only score from claiming 100% for a masthead or body text.
         """
-        source_metadata = source_metadata or {}
+        source_metadata = dict(source_metadata or {})
+        for field in ("title", "abstract"):
+            value = source_metadata.get(field)
+            if isinstance(value, str):
+                source_metadata[field] = TextCleaner.full_clean(
+                    value, preserve_paragraphs=False
+                )[0]
+        authors = source_metadata.get("authors")
+        if isinstance(authors, list):
+            source_metadata["authors"] = [
+                cleaned
+                for author in authors
+                if isinstance(author, str)
+                and (cleaned := TextCleaner.full_clean(author)[0])
+            ]
         resolved = {
             "title": result.title,
             "authors": result.authors,
