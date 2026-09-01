@@ -71,6 +71,7 @@ class ScrapeStatus:
             self.current_url = ""
             self.error_message = ""
             self.done = False
+            self.job_phase = "idle"
             self.current_year: int | None = None
             self.discovery_phase = "idle"
             self.discovery_current = 0
@@ -95,6 +96,7 @@ class ScrapeStatus:
             self.duplicates = self.errors = 0
             self.current_url = self.error_message = ""
             self.done = False
+            self.job_phase = "discovery"
             self.current_year = None
             self.discovery_phase = "archive"
             self.discovery_current = 0
@@ -120,6 +122,12 @@ class ScrapeStatus:
         with self._lock:
             self.running = False
             self.done = True
+            self.job_phase = "completed"
+
+    def set_job_phase(self, phase: str) -> None:
+        """Expose the current high-level phase without changing counters."""
+        with self._lock:
+            self.job_phase = phase
 
     def add_pdf_record(self, record: dict) -> None:
         """Add one result to the current crawl session safely."""
@@ -196,6 +204,7 @@ class ScrapeStatus:
                 "current_url": self.current_url,
                 "error_message": self.error_message,
                 "done": self.done,
+                "job_phase": self.job_phase,
                 "current_year": self.current_year,
                 "discovery_phase": self.discovery_phase,
                 "discovery_current": self.discovery_current,
@@ -575,6 +584,7 @@ class PDFScraper:
                 return
 
             # Step 5: Tải từng PDF
+            scrape_status.set_job_phase("downloading")
             for i, pdf_url in enumerate(pdf_links, 1):
                 if scrape_status.should_stop:
                     scrape_status.log("🛑 Đã dừng theo yêu cầu.")
@@ -584,6 +594,7 @@ class PDFScraper:
                 # discovery. Keep walking the complete list so known URLs are
                 # skipped and a later unseen PDF can fill a slot.
                 if scrape_status.downloaded >= MAX_PDFS:
+                    scrape_status.set_job_phase("quota_reached")
                     scrape_status.log(
                         f"⚠️ Đã lưu {MAX_PDFS} PDF mới; dừng lượt tải, "
                         "danh sách còn lại sẽ được tiếp tục ở lượt quét sau.",
@@ -635,6 +646,19 @@ class PDFScraper:
                         else:
                             self._record_manifest_retry(pdf_url)
                     scrape_status.mark_batch_processed()
+
+                    # Stop immediately after the final successful download.
+                    # Waiting for another loop iteration previously added one
+                    # unnecessary rate-limit delay and made the UI look as if
+                    # the crawler continued past its quota.
+                    if scrape_status.downloaded >= MAX_PDFS:
+                        scrape_status.set_job_phase("quota_reached")
+                        scrape_status.log(
+                            f"⚠️ Đã lưu đủ giới hạn {MAX_PDFS} PDF mới; "
+                            "chuyển sang hoàn tất bản ghi và dừng lượt tải.",
+                            "warning",
+                        )
+                        break
                 except Exception as e:
                     scrape_status.errors += 1
                     scrape_status.log(f"❌ Lỗi tải {pdf_url}: {e}", "error")

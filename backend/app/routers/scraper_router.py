@@ -298,6 +298,8 @@ def start_scrape(request: ScrapeRequest, _: None = Depends(require_write_access)
                 url=url, max_depth=request.max_depth, start_year=start_year,
                 end_year=end_year, status_started=True, complete_status=False,
             )
+            if scrape_status.to_dict().get("job_phase") != "quota_reached":
+                scrape_status.set_job_phase("finalizing")
             # Keep the job reserved until its records are durable. Otherwise a
             # new crawl can reset the shared record list between download and
             # persistence, leaving files that future duplicate checks cannot
@@ -609,13 +611,33 @@ def list_pdfs(
 @router.get("/stats")
 def get_stats():
     """Thống kê tổng quan."""
-    scraped = len(_stored_scraped_pdfs())
+    stored_pdfs = _stored_scraped_pdfs()
+    stored_count = len(stored_pdfs)
+    registered_count = sum(1 for item in stored_pdfs if item.get("paper_id"))
+
+    paper_records = None
+    scraped_records = None
+    repo = _get_repo()
+    if repo is not None:
+        try:
+            repository_stats = repo.get_scrape_stats()
+            paper_records = repository_stats["total"]
+            scraped_records = repository_stats["scraped"]
+        except Exception as exc:
+            logger.warning("Could not load MongoDB statistics: %s", exc)
 
     current = scrape_status.to_dict()
     return {
-        "total": scraped,
-        "scraped": scraped,
+        # Preserve the existing fields for API compatibility. They count PDF
+        # files in storage, while the new fields expose MongoDB coverage.
+        "total": stored_count,
+        "scraped": stored_count,
         "uploaded": 0,
+        "storage_files": stored_count,
+        "registered_files": registered_count,
+        "unregistered_files": stored_count - registered_count,
+        "paper_records": paper_records,
+        "scraped_records": scraped_records,
         "current_job": {
             key: current[key]
             for key in ("running", "downloaded", "duplicates", "errors", "done")

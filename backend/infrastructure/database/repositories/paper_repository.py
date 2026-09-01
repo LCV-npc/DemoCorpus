@@ -21,7 +21,6 @@ class PaperRepository:
     def __init__(self, db=None):
         self.db = db if db is not None else get_db()
         self.papers = self.db["papers"]
-        self.jobs = self.db["processing_jobs"]
         self._ensure_indexes()
         logger.info("PaperRepository initialized")
 
@@ -36,7 +35,6 @@ class PaperRepository:
         - confidence.overall: filter papers by quality score
         - processing.created_at: sort by creation date
         - source: filter by source type (upload/scrape/local)
-        - job_id (unique) on processing_jobs: lookup jobs
         """
         try:
             # Unique index on paper_id
@@ -53,8 +51,6 @@ class PaperRepository:
             self.papers.create_index([("processing.created_at", ASCENDING)])
             # Index for source type filtering
             self.papers.create_index([("source", ASCENDING)])
-            # Unique index on job_id for processing jobs
-            self.jobs.create_index("job_id", unique=True)
             logger.info("Database indexes ensured")
         except Exception as e:
             logger.warning(f"Index creation warning: {e}")
@@ -197,57 +193,3 @@ class PaperRepository:
             "scraped": scraped,
             "uploaded": uploaded,
         }
-
-    # ── Processing Jobs ──
-
-    def create_job(self, total_files: int) -> str:
-        """Tạo processing job mới."""
-        import uuid
-        job_id = str(uuid.uuid4())
-        self.jobs.insert_one({
-            "job_id": job_id,
-            "status": "pending",
-            "total_files": total_files,
-            "processed_files": 0,
-            "failed_files": 0,
-            "paper_ids": [],
-            "errors": [],
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "completed_at": None,
-        })
-        return job_id
-
-    def update_job_progress(
-        self,
-        job_id: str,
-        paper_id: str = "",
-        failed: bool = False,
-        error_msg: str = "",
-    ) -> None:
-        """Cập nhật tiến trình job."""
-        update = {
-            "$inc": {"processed_files": 1},
-        }
-        if failed:
-            update["$inc"]["failed_files"] = 1
-            if error_msg:
-                update.setdefault("$push", {})["errors"] = error_msg
-        elif paper_id:
-            update.setdefault("$push", {})["paper_ids"] = paper_id
-
-        update.setdefault("$set", {})["status"] = "running"
-        self.jobs.update_one({"job_id": job_id}, update)
-
-    def complete_job(self, job_id: str) -> None:
-        """Đánh dấu job hoàn thành."""
-        self.jobs.update_one(
-            {"job_id": job_id},
-            {"$set": {
-                "status": "completed",
-                "completed_at": datetime.now(timezone.utc).isoformat(),
-            }},
-        )
-
-    def get_job(self, job_id: str) -> Optional[dict]:
-        """Lấy thông tin job."""
-        return self.jobs.find_one({"job_id": job_id}, {"_id": 0})

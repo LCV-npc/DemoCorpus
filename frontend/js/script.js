@@ -24,13 +24,13 @@
         sidebar: $('#app-sidebar'), sidebarBackdrop: $('#sidebar-backdrop'), sidebarToggle: $('#btn-sidebar-toggle'),
         topbarTitle: $('#topbar-title'), topbarJob: $('#topbar-job-status'),
         sidebarHealth: $('#sidebar-health'), sidebarHealthDetail: $('#sidebar-health-detail'), sidebarHealthDot: $('#sidebar-health-dot'),
-        overviewTotal: $('#overview-total'), overviewDownloaded: $('#overview-downloaded'), overviewDuplicates: $('#overview-duplicates'), overviewErrors: $('#overview-errors'), overviewJobCaption: $('#overview-job-caption'), overviewRunBadge: $('#overview-run-badge'), overviewCurrentUrl: $('#overview-current-url'), overviewProgress: $('#overview-progress'),
+        overviewTotal: $('#overview-total'), overviewStorageCaption: $('#overview-total + small'), overviewDownloaded: $('#overview-downloaded'), overviewDuplicates: $('#overview-duplicates'), overviewErrors: $('#overview-errors'), overviewJobCaption: $('#overview-job-caption'), overviewRunBadge: $('#overview-run-badge'), overviewCurrentUrl: $('#overview-current-url'), overviewProgress: $('#overview-progress'),
         scrapeForm: $('#scrape-form'), scrapeUrl: $('#scrape-url'), startYear: $('#start-year'), endYear: $('#end-year'), maxDepth: $('#max-depth'), scrapeFormError: $('#scrape-form-error'), startScrape: $('#btn-start-scrape'), stopScrape: $('#btn-stop-scrape'), scraperStatus: $('#scraper-status-badge'), scraperStatusText: $('#scraper-status-text'),
         progressPanel: $('#scrape-progress-container'), progressLabel: $('#progress-label'), progressCount: $('#progress-count'), progressFill: $('#scrape-progress-fill'), logConsole: $('#log-console'), clearLog: $('#btn-clear-log'),
         uploadZone: $('#upload-zone'), fileUpload: $('#file-upload'), uploadProgress: $('#upload-progress'), uploadProgressFill: $('#upload-progress-fill'), uploadProgressText: $('#upload-progress-text'), uploadResultSection: $('#upload-result-section'), uploadResultStatus: $('#upload-result-status'), uploadResultPaperId: $('#upload-result-paper-id'), uploadResultTitle: $('#upload-result-title'), uploadResultAuthors: $('#upload-result-authors'), uploadResultAbstract: $('#upload-result-abstract'), uploadResultConfidence: $('#upload-result-confidence'), uploadResultTitleScore: $('#upload-result-title-score'), uploadResultAuthorsScore: $('#upload-result-authors-score'), uploadResultAbstractScore: $('#upload-result-abstract-score'), uploadResultTime: $('#upload-result-time'), uploadResultStages: $('#upload-result-stages'),
         searchInput: $('#search-input'), libraryContext: $('#library-context'), extractScraped: $('#btn-extract-scraped'), stopExtraction: $('#btn-stop-extraction'), refreshLibrary: $('#btn-refresh-library'), pdfTableBody: $('#pdf-table-body'), prevPage: $('#btn-prev-page'), nextPage: $('#btn-next-page'), paginationInfo: $('#pagination-info'),
         resultsSearchInput: $('#results-search-input'), refreshResults: $('#btn-refresh-results'), resultsTableBody: $('#results-table-body'), resultsPrev: $('#btn-results-prev'), resultsNext: $('#btn-results-next'), resultsPaginationInfo: $('#results-pagination-info'),
-        statTotal: $('#stat-total'), statDownloaded: $('#stat-downloaded'), statDuplicates: $('#stat-duplicates'), statErrors: $('#stat-errors'),
+        statTotal: $('#stat-total'), statStorageCaption: $('#stat-total + small'), statDownloaded: $('#stat-downloaded'), statDuplicates: $('#stat-duplicates'), statErrors: $('#stat-errors'),
         modalOverlay: $('#paper-detail-modal'), modal: $('#paper-detail-modal .modal'), closeModal: $('#btn-close-modal'), modalPaperId: $('#modal-paper-id'), modalTitle: $('#modal-title'), modalAuthors: $('#modal-authors'), modalAbstract: $('#modal-abstract'), modalSource: $('#modal-source'), modalCreated: $('#modal-created'), modalConfidenceOverall: $('#modal-confidence-overall'), modalConfidenceTitle: $('#modal-confidence-title'), modalConfidenceAuthors: $('#modal-confidence-authors'), modalConfidenceAbstract: $('#modal-confidence-abstract'), modalValidationSection: $('#modal-validation-section'), modalValidationDetails: $('#modal-validation-details'), modalStages: $('#modal-stages'), modalReviewCheckbox: $('#modal-review-checkbox'), modalReviewNotes: $('#modal-review-notes'), saveReview: $('#btn-save-review'),
         toastContainer: $('#toast-container'),
     };
@@ -159,8 +159,11 @@
 
     function updateJobStatus(status) {
         const finished = status.done && !status.running;
+        const jobPhase = status.job_phase || 'idle';
+        const quotaReached = jobPhase === 'quota_reached';
+        const finalizing = status.running && ['quota_reached', 'finalizing'].includes(jobPhase);
         const state = status.running ? 'running' : status.errors ? 'warning' : finished ? 'done' : 'idle';
-        const statusText = status.running ? 'Đang quét' : finished ? 'Đã hoàn tất' : 'Sẵn sàng';
+        const statusText = status.running ? (finalizing ? 'Đang hoàn tất' : 'Đang quét') : finished ? 'Đã hoàn tất' : 'Sẵn sàng';
         setStatusText(dom.scraperStatus, statusText, state);
         const badgeClass = status.running ? 'status-badge status-badge--success' : status.errors ? 'status-badge status-badge--error' : 'status-badge';
         dom.overviewRunBadge.className = badgeClass;
@@ -174,12 +177,13 @@
         const catalogPending = Number(status.catalog_pending) || 0;
         const batchTotal = Number(status.batch_total) || 0;
         const batchProcessed = Number(status.batch_processed) || 0;
+        const downloaded = Number(status.downloaded) || 0;
         const usingCatalog = catalogTotal > 0;
         const processingTotal = usingCatalog
-            ? Math.max(batchTotal, batchProcessed)
+            ? batchTotal
             : shownTotal;
         const processingComplete = usingCatalog
-            ? Math.min(batchProcessed, processingTotal)
+            ? Math.min(downloaded, processingTotal)
             : legacyComplete;
         const discovering = status.running && total === 0;
         const discoveryPhase = status.discovery_phase || 'archive';
@@ -195,8 +199,11 @@
             ? `Danh mục ${catalogTotal.toLocaleString('vi-VN')} PDF · ${catalogPending.toLocaleString('vi-VN')} mục chưa hoàn tất`
             : '';
         const batchText = usingCatalog
-            ? `Lô hiện tại ${processingComplete}/${processingTotal || 0}`
+            ? `PDF mới ${processingComplete}/${processingTotal || 0}`
             : `Đang xử lý ${processingComplete}/${processingTotal || '—'} mục`;
+        const inspectedText = usingCatalog
+            ? `${batchProcessed.toLocaleString('vi-VN')} ứng viên đã kiểm tra`
+            : '';
         dom.overviewDownloaded.textContent = status.downloaded ?? 0;
         dom.overviewDuplicates.textContent = status.duplicates ?? 0;
         dom.overviewErrors.textContent = status.errors ?? 0;
@@ -204,29 +211,35 @@
         dom.statDuplicates.textContent = status.duplicates ?? 0;
         dom.statErrors.textContent = status.errors ?? 0;
         dom.overviewJobCaption.textContent = status.running
-            ? (discovering ? discoveryText : `${batchText} · ${catalogText || 'đang xử lý'}`)
+            ? (discovering
+                ? discoveryText
+                : finalizing
+                    ? `${quotaReached ? 'Đã đạt giới hạn' : 'Đã dừng tải ở'} ${downloaded.toLocaleString('vi-VN')} PDF mới · đang hoàn tất lưu dữ liệu`
+                    : `${batchText} · ${inspectedText || catalogText || 'đang xử lý'}`)
             : finished
                 ? (catalogText || 'Kết quả lượt quét gần nhất')
                 : 'Chưa có lượt quét đang chạy';
         dom.overviewCurrentUrl.textContent = status.current_url || 'Chưa có URL';
         dom.overviewCurrentUrl.title = status.current_url || '';
         dom.overviewProgress.textContent = usingCatalog
-            ? `${batchText} · ${catalogPending}/${catalogTotal} chờ xử lý`
+            ? `${batchText} · ${inspectedText} · ${catalogPending}/${catalogTotal} chờ xử lý`
             : `${processingComplete} / ${processingTotal}`;
         dom.progressLabel.textContent = discovering
             ? discoveryText
             : usingCatalog
-                ? `${status.manifest_reused ? 'Tiếp tục từ danh mục đã lưu' : 'Đang tải lô đầu tiên'} · ${batchText}`
+                ? finalizing
+                    ? `${quotaReached ? 'Đã đạt giới hạn tải' : 'Đang hoàn tất lượt tải'} · đang lưu ${downloaded.toLocaleString('vi-VN')} bản ghi`
+                    : `${status.manifest_reused ? 'Tiếp tục từ danh mục đã lưu' : 'Đang tải lô đầu tiên'} · ${batchText}`
                 : status.current_url ? `Đang xử lý: ${truncate(status.current_url, 105)}` : 'Đang chuẩn bị lượt quét…';
         dom.progressLabel.title = status.current_url || '';
         dom.progressCount.textContent = discovering
             ? (discoveryTotal ? `${discoveryCurrent} / ${discoveryTotal} · ${discoveryPercent}%` : `Trang ${Math.max(1, discoveryCurrent)}`)
             : usingCatalog
-                ? `${batchText} · ${catalogPending.toLocaleString('vi-VN')} chờ xử lý`
+                ? `${batchText} · ${inspectedText} · ${catalogPending.toLocaleString('vi-VN')} chờ xử lý`
                 : `${processingComplete} / ${processingTotal}`;
         dom.progressFill.classList.toggle('is-indeterminate', discovering && !discoveryTotal);
         dom.progressFill.style.width = `${discovering ? (discoveryTotal ? discoveryPercent : 0) : (processingTotal ? Math.min(100, (processingComplete / processingTotal) * 100) : 0)}%`;
-        dom.topbarJob.innerHTML = `<span class="status-indicator ${status.running ? 'is-running' : finished ? 'is-ok' : ''}"></span><span>${status.running ? 'Đang có lượt quét chạy' : finished ? 'Lượt quét đã hoàn tất' : 'Chưa có lượt quét đang chạy'}</span>`;
+        dom.topbarJob.innerHTML = `<span class="status-indicator ${status.running ? 'is-running' : finished ? 'is-ok' : ''}"></span><span>${status.running ? (finalizing ? 'Đang hoàn tất lượt quét' : 'Đang có lượt quét chạy') : finished ? 'Lượt quét đã hoàn tất' : 'Chưa có lượt quét đang chạy'}</span>`;
         renderLogs(status.log_messages || []);
     }
 
@@ -502,7 +515,18 @@
         try {
             const stats = await apiGet('/stats');
             dom.overviewTotal.textContent = stats.total ?? '—'; dom.statTotal.textContent = stats.total ?? '—';
-        } catch (error) { dom.overviewTotal.textContent = '—'; dom.statTotal.textContent = '—'; }
+            const mongoCount = Number.isInteger(stats.paper_records) ? stats.paper_records : null;
+            const pendingCount = Number(stats.unregistered_files) || 0;
+            const caption = mongoCount === null
+                ? 'PDF hiện có trên thư mục lưu trữ'
+                : `${mongoCount} bản ghi MongoDB · ${pendingCount} PDF chưa có bản ghi`;
+            dom.overviewStorageCaption.textContent = caption;
+            dom.statStorageCaption.textContent = caption;
+        } catch (error) {
+            dom.overviewTotal.textContent = '—'; dom.statTotal.textContent = '—';
+            dom.overviewStorageCaption.textContent = 'Không thể tải thống kê kho';
+            dom.statStorageCaption.textContent = 'Không thể tải thống kê kho';
+        }
     }
     async function checkHealth() {
         try {

@@ -499,7 +499,12 @@ def test_scraper_skips_known_urls_then_uses_quota_for_new_pdfs(monkeypatch, tmp_
     # than attempting a real MongoDB connection for the optional manifest.
     monkeypatch.setattr(scraper, "_get_manifest_store", lambda: None)
     monkeypatch.setattr(scraper, "_check_robots_txt", lambda *_: True)
-    monkeypatch.setattr(scraper_module.time, "sleep", lambda *_: None)
+    sleep_calls: list[float] = []
+    monkeypatch.setattr(
+        scraper_module.time,
+        "sleep",
+        lambda seconds: sleep_calls.append(seconds),
+    )
 
     def download(pdf_url, *_args):
         calls.append(pdf_url)
@@ -518,6 +523,11 @@ def test_scraper_skips_known_urls_then_uses_quota_for_new_pdfs(monkeypatch, tmp_
     assert scrape_status.duplicates == 1
     assert scrape_status.downloaded == 2
     assert calls == fresh_urls[:2]
+    # The final successful download reaches the quota and must break before
+    # another rate-limit sleep. Processed candidates may exceed the download
+    # quota because duplicates are inspected but never counted as new PDFs.
+    assert len(sleep_calls) == 1
+    assert scrape_status.batch_processed == 3
 
 
 def test_scraper_indexes_existing_files_for_duplicate_detection(tmp_path: Path):

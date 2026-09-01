@@ -117,6 +117,34 @@ class TestCurrentCrawlResults:
 
 
 class TestStoredPdfMetadataExtraction:
+    def test_stats_distinguish_storage_files_from_mongodb_records(self, client, monkeypatch):
+        class FakeRepo:
+            @staticmethod
+            def get_scrape_stats():
+                return {"total": 2, "scraped": 2, "uploaded": 0}
+
+        monkeypatch.setattr(
+            scraper_router,
+            "_stored_scraped_pdfs",
+            lambda: [
+                {"filename": "registered.pdf", "paper_id": "paper-1"},
+                {"filename": "orphan-1.pdf"},
+                {"filename": "orphan-2.pdf"},
+            ],
+        )
+        monkeypatch.setattr(scraper_router, "_get_repo", lambda: FakeRepo())
+
+        response = client.get("/api/stats")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 3
+        assert data["storage_files"] == 3
+        assert data["registered_files"] == 1
+        assert data["unregistered_files"] == 2
+        assert data["paper_records"] == 2
+        assert data["scraped_records"] == 2
+
     def test_bulk_extraction_skips_completed_pdfs(self, client, monkeypatch):
         pending_path = str((_project_root / "pending.pdf").resolve())
         completed_path = str((_project_root / "completed.pdf").resolve())

@@ -90,7 +90,6 @@ def repo(test_db):
     """PaperRepository sử dụng test database."""
     # Clean collections before each test
     test_db["papers"].delete_many({})
-    test_db["processing_jobs"].delete_many({})
     return PaperRepository(db=test_db)
 
 
@@ -407,62 +406,7 @@ class TestDeletePaper:
 
 
 # ─────────────────────────────────────────────
-# Processing Jobs Tests
 # ─────────────────────────────────────────────
-
-class TestProcessingJobs:
-    """Test processing job lifecycle."""
-
-    def test_create_job(self, repo):
-        """Create job và verify."""
-        job_id = repo.create_job(total_files=10)
-        assert len(job_id) > 0
-
-        job = repo.get_job(job_id)
-        assert job is not None
-        assert job["status"] == "pending"
-        assert job["total_files"] == 10
-        assert job["processed_files"] == 0
-
-    def test_update_job_progress_success(self, repo):
-        """Update progress cho job."""
-        job_id = repo.create_job(total_files=3)
-
-        repo.update_job_progress(job_id, paper_id="paper-1")
-        job = repo.get_job(job_id)
-        assert job["processed_files"] == 1
-        assert job["status"] == "running"
-        assert "paper-1" in job["paper_ids"]
-
-    def test_update_job_progress_failed(self, repo):
-        """Update progress khi file fail."""
-        job_id = repo.create_job(total_files=3)
-
-        repo.update_job_progress(
-            job_id,
-            failed=True,
-            error_msg="Extraction failed: corrupted PDF",
-        )
-        job = repo.get_job(job_id)
-        assert job["processed_files"] == 1
-        assert job["failed_files"] == 1
-        assert "Extraction failed" in job["errors"][0]
-
-    def test_complete_job(self, repo):
-        """Complete job và verify."""
-        job_id = repo.create_job(total_files=1)
-        repo.update_job_progress(job_id, paper_id="paper-1")
-        repo.complete_job(job_id)
-
-        job = repo.get_job(job_id)
-        assert job["status"] == "completed"
-        assert job["completed_at"] is not None
-
-    def test_get_job_not_found(self, repo):
-        """Get job không tồn tại trả về None."""
-        result = repo.get_job("nonexistent-job-id")
-        assert result is None
-
 
 # ─────────────────────────────────────────────
 # Data Integrity Tests
