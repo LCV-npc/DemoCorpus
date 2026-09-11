@@ -34,19 +34,18 @@
     "notes": "Authors have affiliation superscripts that may leak into names."
   },
   {
-    "filename": "00982c98_00982c98.pdf",
-    "path": "../data/scraped_pdfs/tapchiyhocvietnam.vn/00982c98_00982c98.pdf",
-    "language": "vi",
+    "filename": "pdf_be1d0508.pdf",
+    "path": "../data/scraped_pdfs/tapchinghiencuuyhoc.vn/2023/pdf_be1d0508.pdf",
+    "language": "en",
     "layout": "2-col",
-    "source": "tapchiyhocvietnam.vn",
-    "expected_title": "ĐÁNH GIÁ KẾT QUẢ PHẪU THUẬT MẤT VỮNG C1-C2 DO CHẤN THƯƠNG TẠI BỆNH VIỆN CHỢ RẪY",
+    "source": "tapchinghiencuuyhoc.vn",
+    "expected_title": "SEVERE ELECTROLYTE DISORDERS AFTER OVERDOSING OF FUROSEMIDE, SPIRONOLACTONE AND CAPTOPRIL IN INFANTS WITH CONGENITAL HEART DEFECTS: A CASE SERIES",
     "expected_authors": [
-      "Huỳnh Tiền Đức",
-      "Phan Quang Sơn",
-      "Lê Minh Huân"
+      "Dang Thi Hai Van",
+      "Bui Thi Khanh Ngoc"
     ],
-    "expected_abstract_starts_with": "Background",
-    "expected_abstract_min_length": 50,
-    "notes": "Vietnamese medical paper. Authors are subset-match (may have more)."
+    "expected_abstract_starts_with": "Six cases of severe electrolyte disorders",
+    "expected_abstract_min_length": 100,
+    "notes": "Real two-column medical paper from the local scraped corpus."
   }
 ]

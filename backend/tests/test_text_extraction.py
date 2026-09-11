@@ -35,30 +35,19 @@ from core.text_extraction.utils import (
 )
 from core.text_extraction.extractor import PDFTextExtractor
 from core.text_extraction.service import TextExtractionService
+from tests.real_pdf_fixtures import SCRAPED_SAMPLE_PDF
 
 
 # ─────────────────────────────────────────────
 # Fixtures
 # ─────────────────────────────────────────────
 
-# Đường dẫn đến thư mục gốc chứa PDF mẫu
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-_SAMPLE_PDFS_DIR = _PROJECT_ROOT  # PDFs nằm tại d:\Nghiên cứu khoa học\
-
-
-def _get_sample_pdf(filename: str) -> str | None:
-    """Trả về path đến PDF mẫu, None nếu không tồn tại."""
-    path = _SAMPLE_PDFS_DIR / filename
-    return str(path) if path.exists() else None
-
-
 @pytest.fixture
 def sample_pdf_path():
-    """PDF mẫu thật cho integration tests."""
-    path = _get_sample_pdf("2311.02945v3.pdf")
-    if path is None:
-        pytest.skip("Sample PDF not found: 2311.02945v3.pdf")
-    return path
+    """A real PDF from the configured scraped corpus."""
+    if SCRAPED_SAMPLE_PDF is None:
+        pytest.skip("No PDF found under backend/data/scraped_pdfs")
+    return str(SCRAPED_SAMPLE_PDF)
 
 
 @pytest.fixture
@@ -608,7 +597,8 @@ class TestPDFTextExtractor:
     def test_extract_multipage(self, extractor, sample_pdf_path):
         """PDF nhiều trang → đúng số lượng pages."""
         result = extractor.extract(sample_pdf_path)
-        # 2311.02945v3.pdf thường có nhiều trang
+        # The selected corpus fixture may change, so assert its internal
+        # page-count consistency instead of a publisher-specific page count.
         assert result.page_count == len(result.pages)
 
     def test_extract_bbox_values(self, extractor, sample_pdf_path):

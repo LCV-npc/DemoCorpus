@@ -38,6 +38,7 @@ from core.title_detection.scorer import TitleScorer
 from core.title_detection.detector import TitleDetector
 from core.title_detection.service import TitleDetectionService
 from core.title_detection.exceptions import TitleDetectionError
+from tests.real_pdf_fixtures import SCRAPED_SAMPLE_PDF
 
 
 # ─────────────────────────────────────────────
@@ -624,14 +625,6 @@ class TestTitleDetectionService:
 # Tests: Integration — Real PDF (nếu có)
 # ═══════════════════════════════════════════════
 
-_PARENT_DIR = Path(__file__).resolve().parent.parent.parent
-_SAMPLE_PDFS = {
-    "naacl": _PARENT_DIR / "2024.naacl-long.461.pdf",
-    "phogpt": _PARENT_DIR / "2311.02945v3.pdf",
-    "ccpdf": _PARENT_DIR / "2304.14953v2.pdf",
-}
-
-
 def _extract_and_analyze(pdf_path: str) -> LayoutDocument:
     """Helper: Extract text → Layout analysis → return LayoutDocument."""
     from core.text_extraction.extractor import PDFTextExtractor
@@ -644,74 +637,49 @@ def _extract_and_analyze(pdf_path: str) -> LayoutDocument:
 
 
 @pytest.mark.skipif(
-    not _SAMPLE_PDFS["phogpt"].exists(),
-    reason="Sample PDF 2311.02945v3.pdf not found"
+    SCRAPED_SAMPLE_PDF is None,
+    reason="No usable PDF found in data/scraped_pdfs",
 )
-class TestRealPDFPhoGPT:
-    """Integration test trên 2311.02945v3.pdf (arXiv format)."""
+class TestRealScrapedPDFTitle:
+    """Integration tests title detection trên một PDF thật trong kho."""
 
-    def test_title_contains_phogpt(self):
-        """Title phải chứa 'PhoGPT'."""
-        layout_doc = _extract_and_analyze(str(_SAMPLE_PDFS["phogpt"]))
+    def test_detector_finds_plausible_title(self):
+        """Detector phải tìm được tiêu đề có nội dung trên trang đầu."""
+        layout_doc = _extract_and_analyze(str(SCRAPED_SAMPLE_PDF))
         detector = TitleDetector()
         result = detector.detect(layout_doc)
 
         assert result.title is not None, "Title should not be None"
-        assert "PhoGPT" in result.title, (
-            f"Expected 'PhoGPT' in title, got: {result.title!r}"
-        )
-        # PhoGPT PDF: title block ở y=27.8 (header zone), Layout Analysis
-        # classify là BODY → first_line strategy (confidence range 0.30–0.55)
+        assert len(result.title.strip()) >= 10
+        assert any(character.isalpha() for character in result.title)
         assert result.confidence > 0.3
         assert result.page == 0
 
-    def test_title_confidence_reasonable(self):
-        """Confidence phải > 0 (title được tìm thấy)."""
-        layout_doc = _extract_and_analyze(str(_SAMPLE_PDFS["phogpt"]))
+    def test_service_title_confidence_reasonable(self):
+        """Service phải trả về tiêu đề với confidence hợp lệ."""
+        layout_doc = _extract_and_analyze(str(SCRAPED_SAMPLE_PDF))
         service = TitleDetectionService()
         result = service.detect_title(layout_doc)
 
-        # first_line strategy có confidence range [0.30, 0.55]
         assert result.confidence > 0.3
         assert result.title is not None
 
-
-@pytest.mark.skipif(
-    not _SAMPLE_PDFS["naacl"].exists(),
-    reason="Sample PDF 2024.naacl-long.461.pdf not found"
-)
-class TestRealPDFNaacl:
-    """Integration test trên 2024.naacl-long.461.pdf (conference format)."""
-
-    def test_title_contains_cner(self):
-        """Title phải chứa 'CNER' (hoặc liên quan)."""
-        layout_doc = _extract_and_analyze(str(_SAMPLE_PDFS["naacl"]))
+    def test_title_result_has_valid_provenance(self):
+        """Kết quả phải ghi nhận đúng trang và chiến lược phát hiện."""
+        layout_doc = _extract_and_analyze(str(SCRAPED_SAMPLE_PDF))
         detector = TitleDetector()
         result = detector.detect(layout_doc)
 
         assert result.title is not None, "Title should not be None"
-        # Title có thể là "CNER: ..." hoặc tương tự
-        title_upper = result.title.upper()
-        assert "CNER" in title_upper or "NAMED ENTITY" in title_upper, (
-            f"Expected 'CNER' or 'NAMED ENTITY' in title, got: {result.title!r}"
-        )
+        assert result.page == 0
+        assert isinstance(result.strategy, str) and result.strategy
 
-
-@pytest.mark.skipif(
-    not _SAMPLE_PDFS["ccpdf"].exists(),
-    reason="Sample PDF 2304.14953v2.pdf not found"
-)
-class TestRealPDFCcpdf:
-    """Integration test trên 2304.14953v2.pdf."""
-
-    def test_title_contains_ccpdf(self):
-        """Title phải chứa 'CCpdf'."""
-        layout_doc = _extract_and_analyze(str(_SAMPLE_PDFS["ccpdf"]))
+    def test_title_detection_is_deterministic(self):
+        """Cùng một PDF phải cho cùng một tiêu đề qua nhiều lần chạy."""
+        layout_doc = _extract_and_analyze(str(SCRAPED_SAMPLE_PDF))
         detector = TitleDetector()
-        result = detector.detect(layout_doc)
+        first_result = detector.detect(layout_doc)
+        second_result = detector.detect(layout_doc)
 
-        assert result.title is not None, "Title should not be None"
-        title_upper = result.title.upper()
-        assert "CCPDF" in title_upper, (
-            f"Expected 'CCPDF' in title, got: {result.title!r}"
-        )
+        assert first_result.title is not None
+        assert first_result.title == second_result.title

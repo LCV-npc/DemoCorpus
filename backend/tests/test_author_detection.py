@@ -34,6 +34,7 @@ from core.author_detection.cleaner import AuthorCleaner
 from core.author_detection.ner_engine import StubNEREngine
 from core.author_detection.detector import AuthorDetector
 from core.author_detection.service import AuthorDetectionService
+from tests.real_pdf_fixtures import SCRAPED_SAMPLE_PDF
 
 
 # ─────────────────────────────────────────────
@@ -544,13 +545,6 @@ class TestAuthorDetectionService:
 # Tests: Integration — Real PDF
 # ═══════════════════════════════════════════════
 
-_PARENT_DIR = Path(__file__).resolve().parent.parent.parent
-_SAMPLE_PDFS = {
-    "naacl": _PARENT_DIR / "2024.naacl-long.461.pdf",
-    "phogpt": _PARENT_DIR / "2311.02945v3.pdf",
-}
-
-
 def _extract_and_analyze(pdf_path: str):
     """Helper: full pipeline M2 → M3 → M4 → result."""
     from core.text_extraction.extractor import PDFTextExtractor
@@ -567,39 +561,32 @@ def _extract_and_analyze(pdf_path: str):
 
 
 @pytest.mark.skipif(
-    not _SAMPLE_PDFS["naacl"].exists(),
-    reason="Sample PDF 2024.naacl-long.461.pdf not found"
+    SCRAPED_SAMPLE_PDF is None,
+    reason="No usable PDF found in data/scraped_pdfs",
 )
-class TestRealPDFNaacl:
-    """Integration test trên 2024.naacl-long.461.pdf."""
+class TestRealScrapedPDFAuthorDetector:
+    """Integration test AuthorDetector trên một PDF thật trong kho."""
 
     def test_authors_detected(self):
         """Phải detect được authors."""
-        layout_doc, title_result = _extract_and_analyze(
-            str(_SAMPLE_PDFS["naacl"])
-        )
+        layout_doc, title_result = _extract_and_analyze(str(SCRAPED_SAMPLE_PDF))
         detector = AuthorDetector()
         result = detector.detect(layout_doc, title_result)
 
         assert result.count > 0, "Should detect at least 1 author"
-        # Check at least one known author name
-        all_names = " ".join(result.author_names).lower()
-        # The paper has authors like "Guiliano Martinelli" etc.
         assert len(result.author_names) >= 1
 
 
 @pytest.mark.skipif(
-    not _SAMPLE_PDFS["phogpt"].exists(),
-    reason="Sample PDF 2311.02945v3.pdf not found"
+    SCRAPED_SAMPLE_PDF is None,
+    reason="No usable PDF found in data/scraped_pdfs",
 )
-class TestRealPDFPhoGPT:
-    """Integration test trên 2311.02945v3.pdf."""
+class TestRealScrapedPDFAuthorService:
+    """Integration test AuthorDetectionService trên một PDF thật trong kho."""
 
     def test_authors_detected(self):
         """Phải detect được authors."""
-        layout_doc, title_result = _extract_and_analyze(
-            str(_SAMPLE_PDFS["phogpt"])
-        )
+        layout_doc, title_result = _extract_and_analyze(str(SCRAPED_SAMPLE_PDF))
         service = AuthorDetectionService()
         result = service.detect_authors(layout_doc, title_result)
 

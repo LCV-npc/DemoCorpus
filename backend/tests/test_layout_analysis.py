@@ -50,6 +50,7 @@ from core.layout_analysis.column_detector import ColumnDetector
 from core.layout_analysis.reading_order import ReadingOrderReconstructor
 from core.layout_analysis.region_detector import RegionDetector
 from core.layout_analysis.layout_analyzer import LayoutAnalyzer
+from tests.real_pdf_fixtures import SCRAPED_SAMPLE_PDF
 
 
 # ─────────────────────────────────────────────
@@ -120,33 +121,18 @@ def _make_single_column_blocks() -> list[BlockData]:
     ]
 
 
-# Đường dẫn đến PDF mẫu thật
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-_SAMPLE_PDFS_DIR = _PROJECT_ROOT
-
-
-def _get_sample_pdf(filename: str) -> str | None:
-    path = _SAMPLE_PDFS_DIR / filename
-    return str(path) if path.exists() else None
-
-
 @pytest.fixture
 def arxiv_pdf_path():
-    path = _get_sample_pdf("2311.02945v3.pdf")
-    if path is None:
-        pytest.skip("Sample PDF not found")
-    return path
+    if SCRAPED_SAMPLE_PDF is None:
+        pytest.skip("No PDF found under backend/data/scraped_pdfs")
+    return str(SCRAPED_SAMPLE_PDF)
 
 
 @pytest.fixture
 def vn_pdf_path():
-    path = Path(
-        "d:/Nghiên cứu khoa học/pdf_collector/data/scraped_pdfs/"
-        "tapchiyhocvietnam.vn/0be3fc37_0be3fc37.pdf"
-    )
-    if not path.exists():
-        pytest.skip("Vietnamese sample PDF not found")
-    return str(path)
+    if SCRAPED_SAMPLE_PDF is None:
+        pytest.skip("No PDF found under backend/data/scraped_pdfs")
+    return str(SCRAPED_SAMPLE_PDF)
 
 
 # ─────────────────────────────────────────────
